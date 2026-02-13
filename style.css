@@ -1,0 +1,115 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body{
+    background-color:#000;
+    color:white;
+}
+
+/* HEADER */
+
+header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 50px;
+    background:black;
+    position:sticky;
+    top:0;
+    z-index:100;
+}
+
+.logo{
+    color:#e50914;
+    font-size:32px;
+    font-weight:bold;
+    letter-spacing:2px;
+}
+
+.search-box input{
+    padding:10px;
+    width:250px;
+    border:none;
+    border-radius:4px;
+    outline:none;
+}
+
+/* HERO */
+
+.hero{
+    height:60vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding-left:50px;
+    background:linear-gradient(to top, black, transparent),
+    url('https://images.unsplash.com/photo-1504674900247-0877df9cc836');
+    background-size:cover;
+}
+
+.hero h1{
+    font-size:50px;
+    color:#e50914;
+}
+
+.hero p{
+    font-size:20px;
+}
+
+/* MENU */
+
+.menu-section{
+    padding:40px 50px;
+}
+
+.menu-section h2{
+    margin-bottom:20px;
+    color:#e50914;
+}
+
+/* Horizontal scroll */
+
+.menu-row{
+    display:flex;
+    overflow-x:auto;
+    gap:20px;
+}
+
+.menu-row::-webkit-scrollbar{
+    display:none;
+}
+
+/* Cards */
+
+.card{
+    min-width:220px;
+    height:140px;
+    background:#111;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:0.4s;
+}
+
+/* HOVER ZOOM */
+
+.card:hover{
+    transform:scale(1.15);
+    background:#e50914;
+}
+
+/* FOOTER */
+
+footer{
+    text-align:center;
+    padding:20px;
+    background:#111;
+    margin-top:40px;
+}
