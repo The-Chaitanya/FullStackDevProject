@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mess Plans Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+    />
+    <link rel="stylesheet" href="login.css" />
+  </head>
+  <body class="page">
+    <div class="bg-orb orb1"></div>
+    <div class="bg-orb orb2"></div>
+    <div class="bg-orb orb3"></div>
+
+    <header class="page-intro">
+      <p class="eyebrow">Mess Plans</p>
+      <h1>Welcome Back</h1>
+      <p class="subtitle">Choose your portal to continue</p>
+    </header>
+
+    <div class="container">
+      <div class="rope-layer" aria-hidden="true">
+        <span class="rope-connector" aria-hidden="true"></span>
+      </div>
+      <!-- Vendor Login -->
+      <div class="login-card" id="vendorCard">
+        <div class="card-figure">
+          <img src="assets/vendor-image.png" alt="Vendor" class="vendor" />
+        </div>
+
+        <h2>Vendor <span class="login-text">Login</span></h2>
+        <p class="card-subtitle">Manage menus, orders, and availability in one place.</p>
+        <div class="card-features">
+          <span class="card-chip">Orders</span>
+          <span class="card-chip">Menus</span>
+          <span class="card-chip">Payouts</span>
+        </div>
+
+        <div class="card-actions">
+          <button type="button" class="ghost-btn">Continue to Login</button>
+        </div>
+
+        <form id="vendorForm">
+          <input type="email" name="email" placeholder="Vendor Email" required />
+          <input type="password" name="password" placeholder="Password" required />
+          <button type="submit">Login as Vendor</button>
+          <p class="form-message" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <!-- Student Login -->
+      <div class="login-card" id="studentCard">
+        <div class="card-figure">
+          <img src="assets/student-login.png" alt="Student" class="student" />
+        </div>
+
+        <h2>Student <span class="login-text">Login</span></h2>
+        <p class="card-subtitle">Find today's menu, ratings, and nearby mess options.</p>
+        <div class="card-features">
+          <span class="card-chip">Daily Menu</span>
+          <span class="card-chip">Ratings</span>
+          <span class="card-chip">Offers</span>
+        </div>
+
+        <div class="card-actions">
+          <button type="button" class="ghost-btn">Continue to Login</button>
+        </div>
+
+        <form id="studentForm">
+          <input type="email" name="email" placeholder="Student Email" required />
+          <input type="password" name="password" placeholder="Password" required />
+          <button type="submit">Login as Student</button>
+          <p class="form-message" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+      <div class="oauth-pop" aria-hidden="true">
+        <button type="button" class="oauth-btn">
+          <span class="google-dot" aria-hidden="true"></span>
+          <span>Login with Google</span>
+        </button>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="footer-left">
+        <span class="status-dot"></span>
+        <span class="status-text">All systems operational</span>
+      </div>
+      <div class="footer-center">Secure login &#8226; Fast support &#8226; Verified vendors</div>
+      <div class="footer-right">
+        <a href="#">Help</a>
+        <span>&#8226;</span>
+        <a href="#">Privacy</a>
+        <span>&#8226;</span>
+        <a href="#">Terms</a>
+      </div>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+    <script src="login.js"></script>
+  </body>
+</html>
+
+
