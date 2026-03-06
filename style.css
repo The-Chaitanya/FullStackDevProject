@@ -522,16 +522,16 @@ select:focus-visible {
 }
 
 .student-dashboard .cards.dynamic-layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 18px;
-  overflow: visible;
-  scroll-snap-type: none;
-  padding-bottom: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 12px;
 }
 
-.student-dashboard .tier-track.dynamic-track .nav-btn {
-  display: none;
+.student-dashboard .cards.dynamic-layout .card {
+  flex: 0 0 320px;
 }
 
 .cards::-webkit-scrollbar {
@@ -867,6 +867,10 @@ select:focus-visible {
 
   .card {
     min-width: 260px;
+  }
+
+  .student-dashboard .cards.dynamic-layout .card {
+    flex-basis: 260px;
   }
 
   .nav-btn {
