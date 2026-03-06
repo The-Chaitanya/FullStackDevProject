@@ -22,7 +22,10 @@ const oauthBtn = oauthPop ? oauthPop.querySelector(".oauth-btn") : null;
 
 const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
 const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
-const REDIRECT_URL = "https://full-stack-dev-project.vercel.app/index.html";
+const REDIRECT_URL =
+  window.location.origin && window.location.origin !== "null"
+    ? `${window.location.origin}/welcome.html`
+    : "welcome.html";
 
 const supabaseClient =
   window.supabase && typeof window.supabase.createClient === "function"
@@ -603,4 +606,3 @@ window.addEventListener("resize", () => {
   }
 });
 })();
-
