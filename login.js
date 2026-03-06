@@ -22,14 +22,14 @@ const oauthBtn = oauthPop ? oauthPop.querySelector(".oauth-btn") : null;
 
 const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
 const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
-const REDIRECT_URL =
+const VENDOR_REDIRECT_URL =
   window.location.origin && window.location.origin !== "null"
-    ? `${window.location.origin}/welcome.html`
-    : "welcome.html";
+    ? `${window.location.origin}/vendor-dashboard.html`
+    : "vendor-dashboard.html";
 const STUDENT_REDIRECT_URL =
   window.location.origin && window.location.origin !== "null"
-    ? `${window.location.origin}/index.html`
-    : "index.html";
+    ? `${window.location.origin}/student-dashboard.html`
+    : "student-dashboard.html";
 
 const supabaseClient =
   window.supabase && typeof window.supabase.createClient === "function"
@@ -97,7 +97,7 @@ const getActiveForm = () => {
 };
 
 const getRedirectForForm = (form) =>
-  form && form.id === "studentForm" ? STUDENT_REDIRECT_URL : REDIRECT_URL;
+  form && form.id === "studentForm" ? STUDENT_REDIRECT_URL : VENDOR_REDIRECT_URL;
 
 const handlePasswordLogin = async (form) => {
   if (!form) return;
