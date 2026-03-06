@@ -1,0 +1,53 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Profile | Mess Plans</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="profile.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="back-link" href="student-dashboard.html">&larr; Back to Dashboard</a>
+      <h1>Student Profile</h1>
+    </header>
+
+    <main class="profile-wrap">
+      <section class="profile-card">
+        <div class="avatar" id="avatar">S</div>
+        <div class="identity">
+          <h2 id="fullName">Student</h2>
+          <p id="email">Loading account...</p>
+        </div>
+        <div class="actions">
+          <button id="logoutBtn" type="button">Logout</button>
+        </div>
+      </section>
+
+      <section class="details-card">
+        <h3>Account Details</h3>
+        <div class="row">
+          <span>Role</span>
+          <strong>Student</strong>
+        </div>
+        <div class="row">
+          <span>Account Status</span>
+          <strong id="status">Active</strong>
+        </div>
+        <div class="row">
+          <span>Last Sign In</span>
+          <strong id="lastSignIn">-</strong>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="profile.js"></script>
+  </body>
+</html>

@@ -3,59 +3,123 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vendor Dashboard | Coming Soon</title>
+    <title>Vendor Dashboard | Mess Plans</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
-    <style>
-      :root {
-        --bg1: #fff8ef;
-        --bg2: #f7eee3;
-        --ink: #222;
-        --accent: #e1583a;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        font-family: "Poppins", sans-serif;
-        color: var(--ink);
-        background: radial-gradient(circle at top, var(--bg1), var(--bg2));
-        padding: 20px;
-      }
-      .card {
-        width: min(700px, 96vw);
-        background: #fff;
-        border: 1px solid #f0d8c7;
-        border-radius: 18px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-        padding: 28px;
-        text-align: center;
-      }
-      h1 { margin: 0 0 10px; font-size: clamp(1.5rem, 3vw, 2rem); }
-      p { margin: 8px 0; color: #4a4a4a; }
-      .actions { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-      a {
-        text-decoration: none;
-        padding: 10px 16px;
-        border-radius: 999px;
-        font-weight: 600;
-      }
-      .primary { background: var(--accent); color: #fff; }
-      .ghost { border: 1px solid #e5b29f; color: #7a321f; background: #fff; }
-    </style>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="vendor-dashboard.css" />
   </head>
   <body>
-    <main class="card">
-      <h1>Vendor Dashboard Coming Soon</h1>
-      <p>Your vendor panel is not built yet.</p>
-      <p>Login is working and vendors are now routed here correctly.</p>
-      <div class="actions">
-        <a class="ghost" href="welcome.html">Back to Welcome</a>
-        <a class="primary" href="login.html">Back to Login</a>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">MP</span>
+        <div>
+          <h1>Vendor Dashboard</h1>
+          <p>Publish your daily menu for students</p>
+        </div>
       </div>
+      <div class="top-actions">
+        <span id="storageMode" class="storage-pill">Storage: checking...</span>
+        <a href="student-dashboard.html" class="ghost-link">View Student Dashboard</a>
+        <button id="logoutBtn" type="button" class="danger-btn">Logout</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel form-panel">
+        <h2 id="formTitle">Create Daily Menu Card</h2>
+        <p class="muted">One card per mess per day (you can edit anytime).</p>
+        <form id="vendorMenuForm" novalidate>
+          <input type="hidden" id="menuId" />
+
+          <label>
+            Mess Name
+            <input id="messName" type="text" placeholder="e.g. Spice Hub Mess" required />
+          </label>
+
+          <div class="grid-2">
+            <label>
+              Tier
+              <select id="tier" required>
+                <option value="UNLIMITED">UNLIMITED</option>
+                <option value="LIMITED">LIMITED</option>
+                <option value="PRO-REACH">PRO-REACH</option>
+              </select>
+            </label>
+            <label>
+              Menu Date
+              <input id="menuDate" type="date" required />
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label>
+              Price (INR)
+              <input id="price" type="number" min="1" step="1" placeholder="90" required />
+            </label>
+            <label>
+              Rating
+              <input id="rating" type="number" min="1" max="5" step="0.1" value="4.5" required />
+            </label>
+          </div>
+
+          <label>
+            Timings
+            <input id="timings" type="text" placeholder="12:00 PM - 3:00 PM" required />
+          </label>
+
+          <div class="grid-2">
+            <label>
+              Crowd Level
+              <input id="crowd" type="text" placeholder="Low wait" required />
+            </label>
+            <label>
+              Distance
+              <input id="distance" type="text" placeholder="5 min walk to Hostel Block A" required />
+            </label>
+          </div>
+
+          <label>
+            Menu Items (one per line)
+            <textarea id="menuItems" rows="5" placeholder="Dal Tadka&#10;4 Roti&#10;Jeera Rice" required></textarea>
+          </label>
+
+          <label>
+            Special Dish
+            <input id="special" type="text" placeholder="Moong Dal Halwa" required />
+          </label>
+
+          <label class="check-row">
+            <input id="vegetarianOnly" type="checkbox" />
+            <span>Vegetarian only</span>
+          </label>
+
+          <p id="formMessage" class="message" role="status" aria-live="polite"></p>
+
+          <div class="form-actions">
+            <button id="submitBtn" type="submit" class="primary-btn">Save Menu Card</button>
+            <button id="resetBtn" type="button" class="ghost-btn">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel list-panel">
+        <div class="list-header">
+          <div>
+            <h2>Your Daily Cards</h2>
+            <p class="muted">Edit or delete your published menus.</p>
+          </div>
+          <button id="refreshBtn" type="button" class="ghost-btn">Refresh</button>
+        </div>
+        <div id="vendorCards" class="cards"></div>
+      </section>
     </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="menu-data.js"></script>
+    <script src="vendor-dashboard.js"></script>
   </body>
 </html>
