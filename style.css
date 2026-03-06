@@ -521,6 +521,19 @@ select:focus-visible {
   z-index: 1;
 }
 
+.student-dashboard .cards.dynamic-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  overflow: visible;
+  scroll-snap-type: none;
+  padding-bottom: 0;
+}
+
+.student-dashboard .tier-track.dynamic-track .nav-btn {
+  display: none;
+}
+
 .cards::-webkit-scrollbar {
   height: 8px;
 }
@@ -614,6 +627,9 @@ select:focus-visible {
 .card-body {
   padding: 26px 20px 20px;
   background: var(--white);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .card-title {
@@ -667,6 +683,10 @@ select:focus-visible {
   font-size: 12px;
   color: var(--ink-600);
   margin-bottom: 14px;
+}
+
+.card-body .btn {
+  margin-top: auto;
 }
 
 .card-details .label {

@@ -15,7 +15,12 @@
   const tierContainers = Array.from(document.querySelectorAll(".tier")).reduce((acc, section) => {
     const label = section.querySelector(".tier-label")?.textContent?.trim().toUpperCase();
     const cards = section.querySelector(".cards");
-    if (label && cards) acc[label] = cards;
+    const track = section.querySelector(".tier-track");
+    if (label && cards && track) {
+      cards.classList.add("dynamic-layout");
+      track.classList.add("dynamic-track");
+      acc[label] = { cards, track };
+    }
     return acc;
   }, {});
 
@@ -71,8 +76,8 @@
   };
 
   const clearTierCards = () => {
-    Object.values(tierContainers).forEach((wrap) => {
-      wrap.innerHTML = "";
+    Object.values(tierContainers).forEach(({ cards }) => {
+      cards.innerHTML = "";
     });
   };
 
@@ -91,8 +96,9 @@
     });
 
     Object.entries(grouped).forEach(([tier, list]) => {
-      const wrap = tierContainers[tier];
-      if (!wrap) return;
+      const container = tierContainers[tier];
+      if (!container) return;
+      const wrap = container.cards;
 
       if (!list.length) {
         wrap.innerHTML = `<article class="card"><div class="card-body"><h3>No menu yet</h3><p class="page-subtitle">No vendor card for this tier on selected date.</p></div></article>`;
