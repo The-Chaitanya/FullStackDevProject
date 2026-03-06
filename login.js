@@ -26,6 +26,10 @@ const REDIRECT_URL =
   window.location.origin && window.location.origin !== "null"
     ? `${window.location.origin}/welcome.html`
     : "welcome.html";
+const STUDENT_REDIRECT_URL =
+  window.location.origin && window.location.origin !== "null"
+    ? `${window.location.origin}/index.html`
+    : "index.html";
 
 const supabaseClient =
   window.supabase && typeof window.supabase.createClient === "function"
@@ -92,6 +96,9 @@ const getActiveForm = () => {
   return vendorForm || studentForm;
 };
 
+const getRedirectForForm = (form) =>
+  form && form.id === "studentForm" ? STUDENT_REDIRECT_URL : REDIRECT_URL;
+
 const handlePasswordLogin = async (form) => {
   if (!form) return;
   if (!supabaseClient) {
@@ -123,7 +130,7 @@ const handlePasswordLogin = async (form) => {
     }
     if (data?.session) {
       setFormMessage(form, "Signed in. Redirecting...", "success");
-      window.location.href = REDIRECT_URL;
+      window.location.href = getRedirectForForm(form);
     } else {
       setFormMessage(form, "Check your email to confirm sign-in.", "info");
       setFormBusy(form, false);
@@ -140,13 +147,14 @@ const handleGoogleLogin = async () => {
     setFormMessage(form, "Supabase client not available. Check the CDN link.", "error");
     return;
   }
+  const form = getActiveForm();
   if (oauthBtn) {
     oauthBtn.disabled = true;
   }
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: REDIRECT_URL,
+      redirectTo: getRedirectForForm(form),
     },
   });
   if (error) {
