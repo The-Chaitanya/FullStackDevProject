@@ -11,7 +11,6 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="student-dashboard.css" />
   </head>
   <body class="page">
     <header class="site-nav">
@@ -71,13 +70,8 @@
             </select>
           </label>
           <label class="filter-field">
-            <span>Time</span>
-            <select>
-              <option>Any time</option>
-              <option>Breakfast</option>
-              <option>Lunch</option>
-              <option>Dinner</option>
-            </select>
+            <span>Date</span>
+            <input id="menuDateFilter" type="date" />
           </label>
           <label class="filter-field">
             <span>Price</span>
@@ -94,21 +88,7 @@
           </label>
           <button class="btn filter-cta" type="button">Apply Filters</button>
         </form>
-      </section>
-
-      <section class="live-menus" aria-labelledby="liveMenusTitle">
-        <div class="live-header">
-          <div>
-            <p class="eyebrow">Live From Vendors</p>
-            <h2 id="liveMenusTitle" class="filter-title">Today's published menu cards</h2>
-          </div>
-          <div class="live-controls">
-            <input id="liveMenuDate" type="date" aria-label="Select menu date" />
-            <button id="refreshLiveMenus" class="btn" type="button">Refresh</button>
-          </div>
-        </div>
-        <p id="liveMenuStatus" class="live-status" role="status" aria-live="polite"></p>
-        <div id="liveMenuCards" class="live-grid"></div>
+        <p id="dashboardStatus" class="page-subtitle"></p>
       </section>
 
       <section class="tier">
