@@ -1,6 +1,12 @@
 ﻿(() => {
   const api = window.messDataApi;
   if (!api) return;
+  const ROLE_STORAGE_KEY = "messplans_role";
+  try {
+    window.localStorage.setItem(ROLE_STORAGE_KEY, "vendor");
+  } catch (_) {
+    // Ignore storage errors.
+  }
 
   const form = document.getElementById("vendorMenuForm");
   const formMessage = document.getElementById("formMessage");
@@ -216,3 +222,4 @@
 
   init();
 })();
+

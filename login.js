@@ -22,6 +22,7 @@ const oauthBtn = oauthPop ? oauthPop.querySelector(".oauth-btn") : null;
 
 const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
 const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
+const ROLE_STORAGE_KEY = "messplans_role";
 const VENDOR_REDIRECT_URL =
   window.location.origin && window.location.origin !== "null"
     ? `${window.location.origin}/vendor-dashboard.html`
@@ -99,6 +100,27 @@ const getActiveForm = () => {
 const getRedirectForForm = (form) =>
   form && form.id === "studentForm" ? STUDENT_REDIRECT_URL : VENDOR_REDIRECT_URL;
 
+const getRoleForForm = (form) => (form && form.id === "studentForm" ? "student" : "vendor");
+
+const persistRole = (role) => {
+  try {
+    window.localStorage.setItem(ROLE_STORAGE_KEY, role);
+  } catch (_) {
+    // Ignore storage errors in restricted browser modes.
+  }
+};
+
+const withRoleQuery = (url, role) => {
+  try {
+    const target = new URL(url, window.location.origin);
+    target.searchParams.set("role", role);
+    return target.toString();
+  } catch (_) {
+    const joiner = url.includes("?") ? "&" : "?";
+    return `${url}${joiner}role=${encodeURIComponent(role)}`;
+  }
+};
+
 const handlePasswordLogin = async (form) => {
   if (!form) return;
   if (!supabaseClient) {
@@ -115,6 +137,9 @@ const handlePasswordLogin = async (form) => {
     return;
   }
 
+  const role = getRoleForForm(form);
+  persistRole(role);
+
   setFormBusy(form, true);
   setFormMessage(form, "Signing in...", "info");
 
@@ -129,8 +154,9 @@ const handlePasswordLogin = async (form) => {
       return;
     }
     if (data?.session) {
+      await supabaseClient.auth.updateUser({ data: { role } });
       setFormMessage(form, "Signed in. Redirecting...", "success");
-      window.location.href = getRedirectForForm(form);
+      window.location.href = withRoleQuery(getRedirectForForm(form), role);
     } else {
       setFormMessage(form, "Check your email to confirm sign-in.", "info");
       setFormBusy(form, false);
@@ -148,13 +174,15 @@ const handleGoogleLogin = async () => {
     return;
   }
   const form = getActiveForm();
+  const role = getRoleForForm(form);
+  persistRole(role);
   if (oauthBtn) {
     oauthBtn.disabled = true;
   }
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: getRedirectForForm(form),
+      redirectTo: withRoleQuery(getRedirectForForm(form), role),
     },
   });
   if (error) {

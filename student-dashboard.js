@@ -1,6 +1,12 @@
 ﻿(() => {
   const api = window.messDataApi;
   if (!api) return;
+  const ROLE_STORAGE_KEY = "messplans_role";
+  try {
+    window.localStorage.setItem(ROLE_STORAGE_KEY, "student");
+  } catch (_) {
+    // Ignore storage errors.
+  }
 
   const searchInput = document.querySelector('.filter-bar input[type="search"]');
   const tierSelect = document.querySelector('.filter-bar select:nth-of-type(1)');
@@ -163,3 +169,4 @@
   loadMenus();
   window.setInterval(loadMenus, 60000);
 })();
+
