@@ -881,6 +881,7 @@ body:not(.perf-lite) .site-footer {
   margin: 0 auto 40px;
   padding: 24px 8px 0;
   border-top: 1px solid var(--sand-200);
+  background: linear-gradient(180deg, rgba(255, 248, 238, 0.9) 0%, rgba(245, 234, 220, 0.45) 100%);
   display: grid;
   gap: 16px;
 }
