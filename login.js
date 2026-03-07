@@ -103,6 +103,9 @@ const getRedirectForForm = (form) =>
 const getRoleForForm = (form) => (form && form.id === "studentForm" ? "student" : "vendor");
 const normalizeRole = (value) => (String(value || "").toLowerCase() === "vendor" ? "vendor" : "student");
 
+const getRedirectForRole = (role) =>
+  normalizeRole(role) === "vendor" ? VENDOR_REDIRECT_URL : STUDENT_REDIRECT_URL;
+
 const persistRole = (role) => {
   try {
     window.localStorage.setItem(ROLE_STORAGE_KEY, role);
@@ -120,6 +123,24 @@ const withRoleQuery = (url, role) => {
     const joiner = url.includes("?") ? "&" : "?";
     return `${url}${joiner}role=${encodeURIComponent(role)}`;
   }
+};
+
+const redirectByRole = (role) => {
+  const normalizedRole = normalizeRole(role);
+  persistRole(normalizedRole);
+  window.location.href = withRoleQuery(getRedirectForRole(normalizedRole), normalizedRole);
+};
+
+const enforceExistingSessionRole = async () => {
+  if (!supabaseClient) return;
+  const { data } = await supabaseClient.auth.getUser();
+  const user = data?.user;
+  if (!user) return;
+  const roleRaw = user.user_metadata?.role;
+  const hasVendorMess = Boolean(String(user.user_metadata?.mess_name || "").trim());
+  const role = roleRaw ? normalizeRole(roleRaw) : hasVendorMess ? "vendor" : "";
+  if (!role) return;
+  redirectByRole(role);
 };
 
 const handlePasswordLogin = async (form) => {
@@ -624,6 +645,8 @@ if (!supabaseClient) {
     oauthBtn.disabled = true;
   }
 }
+
+enforceExistingSessionRole();
 
 buttons.forEach((btn) => {
   btn.addEventListener("click", (event) => {
