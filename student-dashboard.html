@@ -101,14 +101,31 @@
         <p id="dashboardStatus" class="page-subtitle"></p>
       </section>
 
+      <section class="insights-grid" aria-label="Quick insights">
+        <article class="insight-card">
+          <p class="insight-label">Available Today</p>
+          <p id="insightCount" class="insight-value">0</p>
+          <p class="insight-note">Menus matching your filters</p>
+        </article>
+        <article class="insight-card">
+          <p class="insight-label">Average Price</p>
+          <p id="insightAvgPrice" class="insight-value">Rs 0</p>
+          <p class="insight-note">Across visible menu cards</p>
+        </article>
+        <article class="insight-card">
+          <p class="insight-label">Top Rated</p>
+          <p id="insightTopRated" class="insight-value">-</p>
+          <p class="insight-note">Best rated among results</p>
+        </article>
+      </section>
+
       <section id="noResultsState" class="no-results" hidden>
         <h2>No results found</h2>
         <p>Try another date or clear filters to see available mess menus.</p>
       </section>
 
-      <div id="menuModal" class="menu-modal" hidden>
-        <div class="menu-modal-backdrop" data-menu-close></div>
-        <div class="menu-modal-panel" role="dialog" aria-modal="true" aria-labelledby="menuModalTitle">
+      <dialog id="menuModal" class="menu-modal" aria-labelledby="menuModalTitle">
+        <div class="menu-modal-panel">
           <div class="menu-modal-header">
             <h2 id="menuModalTitle">Full Menu</h2>
             <button id="menuModalClose" type="button" class="ghost-btn menu-modal-close" aria-label="Close">
@@ -133,7 +150,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </dialog>
 
       <section class="tier">
         <div class="tier-label">UNLIMITED</div>

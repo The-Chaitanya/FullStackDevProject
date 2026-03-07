@@ -1,0 +1,113 @@
+body {
+  margin: 0;
+  font-family: "DM Sans", sans-serif;
+  background: #f7f7f7;
+  color: #1f1f1f;
+}
+
+.page {
+  max-width: 760px;
+  margin: 28px auto;
+  padding: 0 16px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: #8f1a1a;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #f2c0c0;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  margin: 0 0 6px;
+}
+
+.meta {
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.items li {
+  padding-left: 14px;
+  position: relative;
+}
+
+.items li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b82222;
+  position: absolute;
+  left: 0;
+  top: 9px;
+}
+
+.details {
+  border-top: 1px dashed #f2c0c0;
+  padding-top: 10px;
+  color: #444;
+  display: grid;
+  gap: 6px;
+}
+
+.rating {
+  border-top: 1px dashed #f2c0c0;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.stars {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.stars button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #f2c0c0;
+  border-radius: 10px;
+  background: #fff;
+  color: #c8c8c8;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.stars button.active {
+  color: #f4b400;
+  border-color: #f4b400;
+  background: #fff8e1;
+}
+
+.submit-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #d93030, #8f1a1a);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.message {
+  margin-top: 8px;
+  color: #666;
+}

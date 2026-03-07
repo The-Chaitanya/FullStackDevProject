@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Menu Details | MessBuddy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="menu-details.css" />
+  </head>
+  <body>
+    <main class="page">
+      <a class="back-link" href="student-dashboard.html">&larr; Back to Dashboard</a>
+      <section class="panel">
+        <h1 id="title">Loading...</h1>
+        <p id="meta" class="meta"></p>
+        <ul id="items" class="items"></ul>
+        <div id="details" class="details"></div>
+        <div class="rating">
+          <h2>Rate this mess</h2>
+          <div id="stars" class="stars">
+            <button type="button" data-star="1">★</button>
+            <button type="button" data-star="2">★</button>
+            <button type="button" data-star="3">★</button>
+            <button type="button" data-star="4">★</button>
+            <button type="button" data-star="5">★</button>
+          </div>
+          <button id="submitRating" class="submit-btn" type="button">Submit Rating</button>
+          <p id="message" class="message"></p>
+        </div>
+      </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="menu-data.js"></script>
+    <script src="menu-details.js"></script>
+  </body>
+</html>

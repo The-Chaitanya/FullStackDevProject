@@ -24,28 +24,59 @@
 body {
   font-family: "DM Sans", "Segoe UI", sans-serif;
   color: var(--ink-900);
-  background: linear-gradient(140deg, #ffffff 0%, #f7f7f7 45%, #f2f2f2 100%);
+  background:
+    radial-gradient(circle at 10% 12%, rgba(217, 48, 48, 0.08), transparent 34%),
+    radial-gradient(circle at 88% 18%, rgba(255, 199, 199, 0.22), transparent 38%),
+    linear-gradient(140deg, #ffffff 0%, #f7f7f7 45%, #f2f2f2 100%);
   min-height: 100vh;
   line-height: 1.6;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -3;
+  width: 360px;
+  height: 360px;
+  border-radius: 28px;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.12;
+  filter: saturate(1.05) contrast(1.02);
+  pointer-events: none;
+}
+
+body::before {
+  left: -80px;
+  bottom: 30px;
+  background-image: url("assets/food-thali.webp");
+  transform: rotate(-8deg);
+}
+
+body::after {
+  right: -90px;
+  top: 110px;
+  background-image: url("assets/food-burger.webp");
+  transform: rotate(9deg);
 }
 
 body.page {
   opacity: 0;
   transform: translateY(10px) scale(0.995);
-  filter: blur(6px);
-  transition: opacity 0.4s ease, transform 0.4s ease, filter 0.4s ease;
+  transition: opacity 0.32s ease, transform 0.32s ease;
 }
 
 body.page.page-loaded {
   opacity: 1;
-  transform: translateY(0) scale(1);
-  filter: blur(0);
+  transform: none;
 }
 
 body.page.page-fade-out {
   opacity: 0;
   transform: translateY(10px) scale(0.995);
-  filter: blur(6px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -54,7 +85,6 @@ body.page.page-fade-out {
   body.page.page-fade-out {
     transition: none;
     transform: none;
-    filter: none;
   }
 }
 
@@ -69,11 +99,14 @@ select {
 }
 
 a,
-button,
+button {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease, background 0.2s ease,
+    border-color 0.2s ease, opacity 0.2s ease;
+}
+
 input,
 select {
-  transition: box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease, background 0.2s ease,
-    border-color 0.2s ease;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 
 .hover-border-target {
@@ -106,7 +139,6 @@ select {
   stroke-dasharray: var(--draw) calc(var(--perimeter) - var(--draw));
   opacity: 0;
   transition: opacity 0.2s ease;
-  will-change: stroke-dasharray, stroke-dashoffset;
 }
 
 .hover-border path.forward {
@@ -141,10 +173,9 @@ select:focus-visible {
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid var(--peach-100);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
 }
 
 .nav-inner {
@@ -175,6 +206,17 @@ select:focus-visible {
   font-weight: 700;
   letter-spacing: 1px;
   box-shadow: 0 10px 18px rgba(217, 48, 48, 0.32);
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(130deg, transparent 28%, rgba(255, 255, 255, 0.32) 50%, transparent 72%);
+  transform: translateX(-130%);
+  animation: brandShimmer 4.8s ease-in-out infinite;
 }
 
 .brand-text {
@@ -206,11 +248,31 @@ select:focus-visible {
   padding: 6px 12px;
   border-radius: 999px;
   transition: background 0.2s ease, color 0.2s ease;
+  position: relative;
 }
 
 .nav-links a:hover {
   background: var(--peach-100);
   color: var(--peach-700);
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--peach-500), var(--peach-700));
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s ease;
+}
+
+.nav-links a:hover::after,
+.nav-links a:focus-visible::after {
+  transform: scaleX(1);
 }
 
 .nav-links a:focus-visible {
@@ -303,6 +365,17 @@ select:focus-visible {
   z-index: -1;
 }
 
+.menu-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(217, 48, 48, 0.11) 0.6px, transparent 0.6px);
+  background-size: 22px 22px;
+  opacity: 0.23;
+}
+
 .page-header {
   margin-bottom: 26px;
   max-width: 650px;
@@ -332,11 +405,25 @@ select:focus-visible {
   margin-bottom: 32px;
   padding: 20px 22px;
   border-radius: 26px;
-  background: linear-gradient(145deg, #fff7f7 0%, #ffffff 60%, #f6f6f6 100%);
+  background: linear-gradient(145deg, #fff7f7 0%, #ffffff 62%, #f6f6f6 100%);
   border: 2px solid var(--peach-100);
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.11);
   display: grid;
   gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-panel::before {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  right: -110px;
+  top: -160px;
+  background: radial-gradient(circle at center, rgba(217, 48, 48, 0.14), transparent 70%);
+  pointer-events: none;
 }
 
 .filter-header {
@@ -400,6 +487,7 @@ select:focus-visible {
   font-size: 13px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transform: translateZ(0);
 }
 
 .chip:hover {
@@ -619,6 +707,59 @@ select:focus-visible {
   display: none !important;
 }
 
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.insight-card {
+  background: linear-gradient(145deg, #fff, #fff7f7 85%);
+  border: 1px solid var(--peach-200);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.insight-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(90deg, var(--peach-500), #ef8888, var(--peach-700));
+}
+
+.insight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.11);
+}
+
+.insight-label {
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ink-600);
+}
+
+.insight-value {
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 4px 0 2px;
+}
+
+.insight-note {
+  font-size: 12px;
+  color: var(--ink-600);
+}
+
 .no-results {
   margin-bottom: 24px;
   padding: 22px;
@@ -637,37 +778,37 @@ select:focus-visible {
   color: var(--ink-600);
 }
 
-.menu-modal[hidden] {
-  display: none !important;
-}
-
 .menu-modal {
   position: fixed;
   inset: 0;
-  z-index: 120;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  border: none;
+  padding: 0;
+  background: transparent;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  margin: 0;
 }
 
-.menu-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+.menu-modal[open] {
+  display: grid;
+  place-items: center;
+  padding: 16px;
 }
 
 .menu-modal-panel {
-  position: relative;
-  width: min(680px, calc(100% - 28px));
-  max-height: calc(100vh - 48px);
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
   overflow: auto;
-  overscroll-behavior: contain;
   border-radius: 18px;
   border: 1px solid var(--peach-200);
   background: #fff;
   box-shadow: 0 24px 40px rgba(0, 0, 0, 0.24);
   padding: 18px;
-  margin: 0 auto;
+}
+
+.menu-modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .menu-modal-header {
@@ -792,6 +933,14 @@ select:focus-visible {
   pointer-events: none;
 }
 
+.tier-track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 80% 12%, rgba(217, 48, 48, 0.08), transparent 34%);
+}
+
 .cards {
   display: flex;
   gap: 20px;
@@ -836,14 +985,14 @@ select:focus-visible {
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  animation: floatIn 600ms ease both;
-  animation-delay: var(--delay);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 24px 36px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  box-shadow: 0 26px 40px rgba(0, 0, 0, 0.2);
 }
 
 .card:focus-within {
@@ -896,7 +1045,7 @@ select:focus-visible {
   position: absolute;
   right: 16px;
   bottom: -18px;
-  background: linear-gradient(135deg, #e53935, #8f1a1a);
+  background: linear-gradient(135deg, #ef3f3f, #8f1a1a);
   color: var(--white);
   padding: 10px 18px;
   border-radius: 18px;
@@ -1106,6 +1255,20 @@ select:focus-visible {
   }
 }
 
+@keyframes brandShimmer {
+  0%,
+  55% {
+    transform: translateX(-130%);
+  }
+  75% {
+    transform: translateX(130%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+
 @media (max-width: 900px) {
   .nav-inner {
     flex-direction: column;
@@ -1136,6 +1299,10 @@ select:focus-visible {
   }
 
   .tier {
+    grid-template-columns: 1fr;
+  }
+
+  .insights-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1174,6 +1341,13 @@ select:focus-visible {
   .site-footer {
     margin: 0 24px 32px;
   }
+
+  body::before,
+  body::after {
+    width: 230px;
+    height: 230px;
+    opacity: 0.08;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1193,6 +1367,15 @@ select:focus-visible {
   .filter-actions .ghost-btn {
     flex: 1;
     justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after,
+  .brand-mark::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
 

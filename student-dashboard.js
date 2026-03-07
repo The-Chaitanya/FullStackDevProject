@@ -23,6 +23,9 @@
   const filterToggleBtn = document.getElementById("filterToggleBtn");
   const filterContent = document.getElementById("filterContent");
   const noResultsState = document.getElementById("noResultsState");
+  const insightCount = document.getElementById("insightCount");
+  const insightAvgPrice = document.getElementById("insightAvgPrice");
+  const insightTopRated = document.getElementById("insightTopRated");
   const menuModal = document.getElementById("menuModal");
   const menuModalClose = document.getElementById("menuModalClose");
   const menuModalPanel = document.querySelector(".menu-modal-panel");
@@ -138,6 +141,9 @@
 
   const openMenuModal = async (menu) => {
     if (!menuModal || !menu) return;
+    if (menuModal.parentElement !== document.body) {
+      document.body.appendChild(menuModal);
+    }
     activeMenuId = menu.id || "";
 
     if (menuModalTitle) menuModalTitle.textContent = menu.mess_name || "Full Menu";
@@ -170,20 +176,40 @@
       `;
     }
 
+    if (typeof menuModal.showModal === "function" && !menuModal.open) {
+      menuModal.showModal();
+    }
+    document.body.style.overflow = "hidden";
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    const resetModalScroll = () => {
+      menuModal.scrollTop = 0;
+      if (menuModalPanel) {
+        menuModalPanel.scrollTop = 0;
+      }
+    };
+    resetModalScroll();
+    window.requestAnimationFrame(() => {
+      resetModalScroll();
+      window.requestAnimationFrame(() => {
+        resetModalScroll();
+      });
+    });
+
     const myScore = currentStudent?.id ? await api.getMyMenuRating(menu.id, currentStudent.id) : null;
     paintStars(myScore || 0);
     if (ratingMessage) ratingMessage.textContent = myScore ? `Your rating: ${myScore}/5` : "";
-
-    if (menuModalPanel) {
-      menuModalPanel.scrollTop = 0;
-    }
-    menuModal.hidden = false;
-    document.body.style.overflow = "hidden";
   };
 
   const closeMenuModal = () => {
     if (!menuModal) return;
-    menuModal.hidden = true;
+    if (menuModalPanel) {
+      menuModalPanel.scrollTop = 0;
+    }
+    if (typeof menuModal.close === "function") {
+      menuModal.close();
+    }
     document.body.style.overflow = "";
     activeMenuId = "";
     if (ratingMessage) ratingMessage.textContent = "";
@@ -219,6 +245,36 @@
 
   const setStatus = (text) => {
     if (statusEl) statusEl.textContent = text;
+  };
+
+  const updateInsights = (menus) => {
+    const total = menus.length;
+    const avgPrice = total
+      ? Math.round(menus.reduce((sum, menu) => sum + Number(menu.price || 0), 0) / total)
+      : 0;
+    const topMenu = total
+      ? menus.reduce((best, menu) => (Number(menu.rating || 0) > Number(best.rating || 0) ? menu : best), menus[0])
+      : null;
+    const topLabel = topMenu ? `${topMenu.mess_name} (${Number(topMenu.rating || 0).toFixed(1)})` : "-";
+
+    if (insightCount) {
+      if (typeof window.gsap !== "undefined") {
+        const state = { value: Number(insightCount.textContent || 0) };
+        window.gsap.to(state, {
+          value: total,
+          duration: 0.4,
+          ease: "power2.out",
+          overwrite: "auto",
+          onUpdate: () => {
+            insightCount.textContent = String(Math.round(state.value));
+          },
+        });
+      } else {
+        insightCount.textContent = String(total);
+      }
+    }
+    if (insightAvgPrice) insightAvgPrice.textContent = `Rs ${avgPrice}`;
+    if (insightTopRated) insightTopRated.textContent = topLabel;
   };
 
   const setFilterOpen = (open) => {
@@ -271,6 +327,7 @@
       return price >= filters.priceRange.min && price <= filters.priceRange.max;
     });
     renderMenus(filteredByPrice);
+    updateInsights(filteredByPrice);
     setStatus(`Showing ${filteredByPrice.length} option(s) for ${filters.date}${mode === "cloud" ? "" : " (offline data)"}.`);
   };
 
@@ -451,6 +508,7 @@
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
     if (target.closest(".view-menu-btn")) {
+      event.preventDefault();
       const card = target.closest(".card");
       const key = card?.dataset.menuKey;
       if (!key) return;
@@ -459,7 +517,7 @@
       openMenuModal(menu);
       return;
     }
-    if (target.closest("[data-menu-close]") || target.id === "menuModalClose") {
+    if (target.id === "menuModalClose") {
       closeMenuModal();
     }
   });
@@ -468,11 +526,20 @@
     menuModalClose.addEventListener("click", closeMenuModal);
   }
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && menuModal && !menuModal.hidden) {
+  if (menuModal) {
+    menuModal.addEventListener("close", () => {
+      document.body.style.overflow = "";
+    });
+    menuModal.addEventListener("cancel", (event) => {
+      event.preventDefault();
       closeMenuModal();
-    }
-  });
+    });
+    menuModal.addEventListener("click", (event) => {
+      if (event.target === menuModal) {
+        closeMenuModal();
+      }
+    });
+  }
 
   if (searchInput) {
     searchInput.addEventListener("keydown", (event) => {
@@ -486,6 +553,9 @@
   const init = async () => {
     const allowed = await ensureStudentRole();
     if (!allowed) return;
+    if (menuModal && menuModal.parentElement !== document.body) {
+      document.body.appendChild(menuModal);
+    }
     currentStudent = await api.getCurrentUser();
     setFilterOpen(true);
     syncTierChips();

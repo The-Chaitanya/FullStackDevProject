@@ -191,6 +191,27 @@
     }
   };
 
+  const getMenuById = async (id) => {
+    const menuId = String(id || "").trim();
+    if (!menuId) return null;
+    if (!client) {
+      return readLocal().find((row) => row.id === menuId) || null;
+    }
+    try {
+      const { data, error } = await client
+        .from(TABLE_NAME)
+        .select("id, owner_id, mess_name, tier, price, rating, timings, crowd, distance, special, menu_items, vegetarian_only, menu_date, updated_at")
+        .eq("id", menuId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      const [row] = await applyRatingsToMenus([normalizeMenu(data)]);
+      return row || null;
+    } catch {
+      return readLocal().find((row) => row.id === menuId) || null;
+    }
+  };
+
   const upsertMenu = async (payload, ownerId) => {
     const safe = normalizeMenu({
       ...payload,
@@ -297,6 +318,7 @@
     toIsoDay,
     listMenus,
     listVendorMenus,
+    getMenuById,
     upsertMenu,
     deleteMenu,
     getCurrentUser,
