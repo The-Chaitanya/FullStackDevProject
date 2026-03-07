@@ -156,7 +156,8 @@ const handlePasswordLogin = async (form) => {
     }
     if (data?.session) {
       const existingRoleRaw = data?.user?.user_metadata?.role;
-      const existingRole = existingRoleRaw ? normalizeRole(existingRoleRaw) : "";
+      const hasVendorMess = Boolean(String(data?.user?.user_metadata?.mess_name || "").trim());
+      const existingRole = existingRoleRaw ? normalizeRole(existingRoleRaw) : hasVendorMess ? "vendor" : "";
       if (existingRole && existingRole !== role) {
         await supabaseClient.auth.signOut();
         setFormMessage(

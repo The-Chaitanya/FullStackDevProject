@@ -151,24 +151,24 @@
   };
 
   const ensureStudentRole = async () => {
-    const hintedRole = normalizeRole(
-      new URLSearchParams(window.location.search).get("role") ||
-        (() => {
-          try {
-            return window.localStorage.getItem(ROLE_STORAGE_KEY);
-          } catch {
-            return "student";
-          }
-        })(),
-    );
+    const queryRole = new URLSearchParams(window.location.search).get("role");
+    const hintedRole = queryRole ? normalizeRole(queryRole) : "";
+    let storedRole = "student";
+    try {
+      storedRole = normalizeRole(window.localStorage.getItem(ROLE_STORAGE_KEY));
+    } catch {
+      storedRole = "student";
+    }
 
     let accountRole = "";
+    let hasVendorMess = false;
     if (authClient) {
       const { data } = await authClient.auth.getUser();
       accountRole = data?.user?.user_metadata?.role ? normalizeRole(data.user.user_metadata.role) : "";
+      hasVendorMess = Boolean(String(data?.user?.user_metadata?.mess_name || "").trim());
     }
 
-    const effectiveRole = accountRole || hintedRole;
+    const effectiveRole = accountRole || (hasVendorMess ? "vendor" : hintedRole || storedRole);
     if (effectiveRole === "vendor") {
       window.location.href = "vendor-dashboard.html?role=vendor";
       return false;
