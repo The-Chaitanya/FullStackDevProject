@@ -2,12 +2,16 @@
   const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
   const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
   const TABLE_NAME = "vendor_mess_cards";
+  const RATINGS_TABLE = "menu_ratings";
   const STORAGE_KEY = "messplans_vendor_menus_v1";
 
   const toIsoDay = (value = new Date()) => {
     const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
-    return date.toISOString().slice(0, 10);
+    const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+    const year = safeDate.getFullYear();
+    const month = String(safeDate.getMonth() + 1).padStart(2, "0");
+    const day = String(safeDate.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
 
   const normalizeMenu = (record = {}) => {
@@ -59,6 +63,45 @@
 
   const client = createSupabaseClient();
 
+  const fetchRatingSummaryMap = async (menuIds = []) => {
+    const ids = Array.from(new Set((menuIds || []).filter(Boolean)));
+    if (!client || !ids.length) return {};
+    try {
+      const { data, error } = await client
+        .from(RATINGS_TABLE)
+        .select("menu_id, rating")
+        .in("menu_id", ids);
+      if (error) throw error;
+      return (data || []).reduce((acc, row) => {
+        const key = row.menu_id;
+        const value = Number(row.rating || 0);
+        if (!key || !value) return acc;
+        if (!acc[key]) acc[key] = { sum: 0, count: 0 };
+        acc[key].sum += value;
+        acc[key].count += 1;
+        return acc;
+      }, {});
+    } catch {
+      return {};
+    }
+  };
+
+  const applyRatingsToMenus = async (rows = []) => {
+    const map = await fetchRatingSummaryMap(rows.map((row) => row.id));
+    return rows.map((row) => {
+      const summary = map[row.id];
+      if (!summary || !summary.count) {
+        return { ...row, rating_count: 0 };
+      }
+      const avg = summary.sum / summary.count;
+      return {
+        ...row,
+        rating: Number(avg.toFixed(1)),
+        rating_count: summary.count,
+      };
+    });
+  };
+
   const listLocalMenus = ({ date, tier, search, vegetarianOnly } = {}) => {
     const day = toIsoDay(date || new Date());
     return readLocal()
@@ -108,6 +151,7 @@
             menu.menu_items.some((item) => item.toLowerCase().includes(q)),
         );
       }
+      rows = await applyRatingsToMenus(rows);
       return { rows, mode: "cloud" };
     } catch {
       return { rows: listLocalMenus({ date: day, tier, search, vegetarianOnly }), mode: "local" };
@@ -135,7 +179,8 @@
       if (ownerId) query = query.eq("owner_id", ownerId);
       const { data, error } = await query;
       if (error) throw error;
-      return { rows: (data || []).map(normalizeMenu), mode: "cloud" };
+      const rows = await applyRatingsToMenus((data || []).map(normalizeMenu));
+      return { rows, mode: "cloud" };
     } catch {
       return {
         rows: readLocal().filter(
@@ -208,6 +253,46 @@
     return data?.user || null;
   };
 
+  const getMyMenuRating = async (menuId, userId = "") => {
+    if (!client || !menuId) return null;
+    const uid = String(userId || "").trim();
+    if (!uid) return null;
+    try {
+      const { data, error } = await client
+        .from(RATINGS_TABLE)
+        .select("rating")
+        .eq("menu_id", menuId)
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.rating ? Number(data.rating) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const rateMenu = async ({ menuId, rating, userId = "" } = {}) => {
+    if (!client || !menuId) {
+      throw new Error("Rating service unavailable.");
+    }
+    const value = Number(rating || 0);
+    if (value < 1 || value > 5) {
+      throw new Error("Rating must be between 1 and 5.");
+    }
+    const uid = String(userId || "").trim();
+    if (!uid) {
+      throw new Error("Please login to rate.");
+    }
+    const payload = {
+      menu_id: menuId,
+      user_id: uid,
+      rating: value,
+    };
+    const { error } = await client.from(RATINGS_TABLE).upsert(payload, { onConflict: "menu_id,user_id" });
+    if (error) throw error;
+    return true;
+  };
+
   window.messDataApi = {
     toIsoDay,
     listMenus,
@@ -215,5 +300,7 @@
     upsertMenu,
     deleteMenu,
     getCurrentUser,
+    getMyMenuRating,
+    rateMenu,
   };
 })();

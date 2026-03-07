@@ -27,9 +27,191 @@ document.querySelectorAll("a[data-transition]").forEach((link) => {
   });
 });
 
-const hoverBorderTargets = Array.from(document.querySelectorAll("button, a.btn, a.ghost-btn"));
+const hoverBorderSelector = "button, a.btn, a.ghost-btn";
+const hoverBorderTargets = Array.from(document.querySelectorAll(hoverBorderSelector));
 let lastPointer = null;
 let prevPointer = null;
+const prefersReducedMotion =
+  window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const tweenNumber = ({ from, to, duration, easing, onUpdate, onComplete }) => {
+  if (typeof gsap !== "undefined" && gsap && typeof gsap.to === "function") {
+    const state = { value: from };
+    const tween = gsap.to(state, {
+      value: to,
+      duration: duration / 1000,
+      ease: easing === "easeInCubic" ? "power1.in" : "power2.out",
+      onUpdate: () => onUpdate(state.value),
+      onComplete: () => onComplete?.(),
+    });
+    return {
+      stop() {
+        tween.kill();
+      },
+    };
+  }
+
+  if (typeof anime !== "undefined" && anime) {
+    const state = { value: from };
+    const animation = anime({
+      targets: state,
+      value: to,
+      duration,
+      easing,
+      update: () => onUpdate(state.value),
+      complete: () => onComplete?.(),
+    });
+    return {
+      stop() {
+        animation.pause();
+      },
+    };
+  }
+
+  onUpdate(to);
+  onComplete?.();
+  return null;
+};
+
+const initButtonFeel = (el) => {
+  if (el.dataset.feelBound === "1" || prefersReducedMotion || typeof gsap === "undefined") {
+    return;
+  }
+  el.dataset.feelBound = "1";
+
+  let isInside = false;
+  const toState = (vars) => {
+    gsap.to(el, {
+      duration: 0.18,
+      ease: "power2.out",
+      overwrite: "auto",
+      ...vars,
+    });
+  };
+
+  el.addEventListener("pointerenter", () => {
+    isInside = true;
+    toState({});
+  });
+
+  el.addEventListener("pointerleave", () => {
+    isInside = false;
+    toState({ scale: 1 });
+  });
+
+  el.addEventListener("pointerdown", () => {
+    toState({ scale: 0.985 });
+  });
+
+  const onPointerUp = () => {
+    if (isInside) {
+      toState({ scale: 1 });
+    } else {
+      toState({ scale: 1 });
+    }
+  };
+
+  el.addEventListener("pointerup", onPointerUp);
+  el.addEventListener("pointercancel", onPointerUp);
+};
+
+const initMagneticButtons = () => {
+  if (prefersReducedMotion || typeof gsap === "undefined") {
+    return;
+  }
+  const magneticTargets = document.querySelectorAll(".btn, .ghost-btn");
+  magneticTargets.forEach((el) => {
+    if (el.dataset.magneticBound === "1") {
+      return;
+    }
+    el.dataset.magneticBound = "1";
+    el.addEventListener("pointermove", (event) => {
+      const rect = el.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width - 0.5;
+      const y = (event.clientY - rect.top) / rect.height - 0.5;
+      gsap.to(el, {
+        x: x * 6,
+        y: y * 4,
+        duration: 0.2,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+    });
+    el.addEventListener("pointerleave", () => {
+      gsap.to(el, {
+        x: 0,
+        y: 0,
+        duration: 0.28,
+        ease: "power3.out",
+        overwrite: "auto",
+      });
+    });
+  });
+};
+
+const initOrbParallax = () => {
+  if (prefersReducedMotion || typeof gsap === "undefined") {
+    return;
+  }
+  const orbs = Array.from(document.querySelectorAll(".bg-orb"));
+  if (!orbs.length) {
+    return;
+  }
+  document.addEventListener("pointermove", (event) => {
+    const xRatio = event.clientX / window.innerWidth - 0.5;
+    const yRatio = event.clientY / window.innerHeight - 0.5;
+    orbs.forEach((orb, index) => {
+      const intensity = 8 + index * 4;
+      gsap.to(orb, {
+        x: xRatio * intensity,
+        y: yRatio * intensity,
+        duration: 0.45,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+    });
+  });
+};
+
+const initPageIntroMotion = () => {
+  if (prefersReducedMotion || typeof gsap === "undefined") {
+    return;
+  }
+  const groups = [
+    { selector: ".site-nav, .page-intro", y: -16, delay: 0.02, duration: 0.48 },
+    { selector: ".hero-cover-content, .page-header, .hero, .container", y: 24, delay: 0.08, duration: 0.62 },
+    {
+      selector:
+        ".filter-panel, .tier, .info-card, .panel, .trust-card, .cta, .site-footer, .page-footer, .login-card",
+      y: 24,
+      delay: 0.14,
+      duration: 0.58,
+      stagger: 0.07,
+    },
+  ];
+
+  groups.forEach(({ selector, y, delay, duration, stagger }) => {
+    const targets = Array.from(document.querySelectorAll(selector)).filter(
+      (el) => !el.hasAttribute("data-reveal"),
+    );
+    if (!targets.length) {
+      return;
+    }
+    gsap.fromTo(
+      targets,
+      { autoAlpha: 0, y },
+      {
+        autoAlpha: 1,
+        y: 0,
+        delay,
+        duration,
+        stagger: stagger || 0,
+        ease: "power2.out",
+        clearProps: "opacity,visibility,transform",
+      },
+    );
+  });
+};
 
 document.addEventListener("pointermove", (event) => {
   prevPointer = lastPointer;
@@ -38,9 +220,11 @@ document.addEventListener("pointermove", (event) => {
 
 const ensureHoverBorder = (el) => {
   if (el.classList.contains("hover-border-target")) {
+    initButtonFeel(el);
     return;
   }
   el.classList.add("hover-border-target");
+  initButtonFeel(el);
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.classList.add("hover-border");
@@ -75,12 +259,12 @@ const ensureHoverBorder = (el) => {
 
   const animateDraw = (to, options = {}) => {
     const target = Math.max(to, 0);
-    if (drawAnimation && typeof drawAnimation.pause === "function") {
-      drawAnimation.pause();
+    if (drawAnimation && typeof drawAnimation.stop === "function") {
+      drawAnimation.stop();
       drawAnimation = null;
     }
     const from = getCurrentDraw();
-    const duration = options.duration ?? 520;
+    const duration = prefersReducedMotion ? 0 : options.duration ?? 520;
     const easing = options.easing ?? "easeOutCubic";
 
     if (!duration) {
@@ -91,16 +275,15 @@ const ensureHoverBorder = (el) => {
       return;
     }
 
-    const animState = { value: from };
-    drawAnimation = anime({
-      targets: animState,
-      value: target,
+    drawAnimation = tweenNumber({
+      from,
+      to: target,
       duration,
       easing,
-      update: () => {
-        el.style.setProperty("--draw", `${animState.value}px`);
+      onUpdate: (value) => {
+        el.style.setProperty("--draw", `${value}px`);
       },
-      complete: () => {
+      onComplete: () => {
         drawAnimation = null;
         if (typeof options.complete === "function") {
           options.complete();
@@ -373,10 +556,35 @@ const ensureHoverBorder = (el) => {
     });
   });
   window.addEventListener("resize", updateGeometry);
+
+  if ("ResizeObserver" in window) {
+    const resizeObserver = new ResizeObserver(updateGeometry);
+    resizeObserver.observe(el);
+  }
 };
 
 const initHoverBorders = () => {
   hoverBorderTargets.forEach(ensureHoverBorder);
+};
+
+const initHoverBorderObserver = () => {
+  if (!("MutationObserver" in window)) {
+    return;
+  }
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (!(node instanceof Element)) {
+          return;
+        }
+        if (node.matches(hoverBorderSelector)) {
+          ensureHoverBorder(node);
+        }
+        node.querySelectorAll?.(hoverBorderSelector).forEach(ensureHoverBorder);
+      });
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 };
 
 const initScrollReveal = () => {
@@ -384,8 +592,6 @@ const initScrollReveal = () => {
   if (!revealTargets.length) {
     return;
   }
-  const prefersReducedMotion =
-    window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (prefersReducedMotion || !("IntersectionObserver" in window)) {
     revealTargets.forEach((el) => el.classList.add("is-visible"));
     return;
@@ -395,6 +601,23 @@ const initScrollReveal = () => {
     (entries, obs) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
+          const delayStep = parseFloat(entry.target.getAttribute("data-delay")) || 0;
+          if (typeof gsap !== "undefined") {
+            gsap.fromTo(
+              entry.target,
+              { autoAlpha: 0, y: 22 },
+              {
+                autoAlpha: 1,
+                y: 0,
+                duration: 0.62,
+                delay: delayStep * 0.08,
+                ease: "power2.out",
+                clearProps: "opacity,visibility,transform",
+              },
+            );
+          } else {
+            entry.target.classList.add("is-visible");
+          }
           entry.target.classList.add("is-visible");
           obs.unobserve(entry.target);
         }
@@ -411,6 +634,9 @@ if ("requestIdleCallback" in window) {
 } else {
   setTimeout(initHoverBorders, 0);
 }
-
+initHoverBorderObserver();
+initMagneticButtons();
+initOrbParallax();
+initPageIntroMotion();
 initScrollReveal();
 })();

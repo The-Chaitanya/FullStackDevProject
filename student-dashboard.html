@@ -10,6 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body class="page student-dashboard">
@@ -45,51 +47,93 @@
         <div class="filter-header">
           <div>
             <p class="eyebrow">Filters</p>
-            <h2 class="filter-title">Find the right mess faster</h2>
-            <p class="filter-subtitle">Search by tier, price, time, or crowd level.</p>
+            <h2 class="filter-title">Find a mess in seconds</h2>
+            <p class="filter-subtitle">Set only what matters and apply.</p>
           </div>
-          <div class="chip-row">
-            <button class="chip active" type="button">All</button>
-            <button class="chip" type="button">High Rated</button>
-            <button class="chip" type="button">Budget</button>
-            <button class="chip" type="button">Closest</button>
-          </div>
+          <button id="filterToggleBtn" class="ghost-btn filter-toggle-btn" type="button" aria-expanded="false">
+            Filters
+          </button>
         </div>
-        <form class="filter-bar" aria-label="Filters">
-          <label class="filter-field">
-            <span>Search</span>
-            <input type="search" placeholder="Search mess or dish" />
-          </label>
-          <label class="filter-field">
-            <span>Tier</span>
-            <select>
-              <option>All tiers</option>
-              <option>Unlimited</option>
-              <option>Limited</option>
-              <option>Pro-Reach</option>
-            </select>
-          </label>
-          <label class="filter-field">
-            <span>Date</span>
-            <input id="menuDateFilter" type="date" />
-          </label>
-          <label class="filter-field">
-            <span>Price</span>
-            <select>
-              <option>Any price</option>
-              <option>Under &#8377;80</option>
-              <option>&#8377;80 - &#8377;100</option>
-              <option>Above &#8377;100</option>
-            </select>
-          </label>
-          <label class="filter-toggle">
-            <input type="checkbox" />
-            <span>Vegetarian only</span>
-          </label>
-          <button class="btn filter-cta" type="button">Apply Filters</button>
-        </form>
+        <div id="filterContent" class="filter-content" hidden>
+          <div class="chip-row quick-tier-row" aria-label="Quick tier filters">
+            <button class="chip active" type="button" data-tier-chip="ALL">All</button>
+            <button class="chip" type="button" data-tier-chip="UNLIMITED">Unlimited</button>
+            <button class="chip" type="button" data-tier-chip="LIMITED">Limited</button>
+            <button class="chip" type="button" data-tier-chip="PRO-REACH">Pro-Reach</button>
+          </div>
+          <form class="filter-bar" aria-label="Filters">
+            <label class="filter-field search-field">
+              <span class="filter-label"><span class="filter-icon" aria-hidden="true">&#128269;</span> Search</span>
+              <input id="menuSearchInput" type="search" placeholder="Search mess or dish" />
+            </label>
+            <label class="filter-field tier-field">
+              <span class="filter-label"><span class="filter-icon" aria-hidden="true">&#9776;</span> Tier</span>
+              <select id="tierFilterSelect">
+                <option value="ALL">All tiers</option>
+                <option value="UNLIMITED">Unlimited</option>
+                <option value="LIMITED">Limited</option>
+                <option value="PRO-REACH">Pro-Reach</option>
+              </select>
+            </label>
+            <label class="filter-field date-field">
+              <span class="filter-label"><span class="filter-icon" aria-hidden="true">&#128197;</span> Date</span>
+              <input id="menuDateFilter" type="date" />
+            </label>
+            <label class="filter-field price-field">
+              <span class="filter-label"><span class="filter-icon" aria-hidden="true">&#8377;</span> Price</span>
+              <select id="priceFilterSelect">
+                <option value="ANY">Any price</option>
+                <option value="UNDER_80">Under &#8377;80</option>
+                <option value="80_TO_100">&#8377;80 - &#8377;100</option>
+                <option value="ABOVE_100">Above &#8377;100</option>
+              </select>
+            </label>
+            <label class="filter-toggle veg-field">
+              <input id="vegOnlyToggle" type="checkbox" />
+              <span>Vegetarian only</span>
+            </label>
+            <div class="filter-actions action-field">
+              <button id="applyFiltersBtn" class="btn filter-cta" type="button">Apply Filters</button>
+              <button id="clearFiltersBtn" class="ghost-btn clear-filter-btn" type="button">Clear</button>
+            </div>
+          </form>
+        </div>
         <p id="dashboardStatus" class="page-subtitle"></p>
       </section>
+
+      <section id="noResultsState" class="no-results" hidden>
+        <h2>No results found</h2>
+        <p>Try another date or clear filters to see available mess menus.</p>
+      </section>
+
+      <div id="menuModal" class="menu-modal" hidden>
+        <div class="menu-modal-backdrop" data-menu-close></div>
+        <div class="menu-modal-panel" role="dialog" aria-modal="true" aria-labelledby="menuModalTitle">
+          <div class="menu-modal-header">
+            <h2 id="menuModalTitle">Full Menu</h2>
+            <button id="menuModalClose" type="button" class="ghost-btn menu-modal-close" aria-label="Close">
+              Close
+            </button>
+          </div>
+          <p id="menuModalMeta" class="menu-modal-meta"></p>
+          <ul id="menuModalItems" class="menu-modal-items"></ul>
+          <div id="menuModalDetails" class="menu-modal-details"></div>
+          <div class="menu-modal-rating">
+            <p class="rating-title">Rate this mess</p>
+            <div id="ratingStars" class="rating-stars" role="group" aria-label="Rate this mess">
+              <button type="button" class="star-btn" data-star="1">★</button>
+              <button type="button" class="star-btn" data-star="2">★</button>
+              <button type="button" class="star-btn" data-star="3">★</button>
+              <button type="button" class="star-btn" data-star="4">★</button>
+              <button type="button" class="star-btn" data-star="5">★</button>
+            </div>
+            <div class="rating-actions">
+              <button id="submitRatingBtn" type="button" class="btn">Submit Rating</button>
+              <p id="ratingMessage" class="page-subtitle"></p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <section class="tier">
         <div class="tier-label">UNLIMITED</div>
@@ -438,8 +482,11 @@
         <span>Designed for campus comfort</span>
       </div>
     </footer>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script src="menu-data.js"></script>
     <script src="student-dashboard.js"></script>
     <script src="script.js"></script>
