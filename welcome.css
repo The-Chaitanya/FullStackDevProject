@@ -877,36 +877,95 @@ body:not(.perf-lite) .site-footer {
 }
 
 .site-footer {
+  border-top: 2px solid #ada9a8;
+  width: 100%;
+  margin: 0;
+  padding: 56px 0 24px;
+  background: linear-gradient(180deg, #fff1e4 0%, #f7dfca 52%, #efc8a9 100%);
+  color: #6a4f3d;
+}
+
+.footer-grid {
   max-width: var(--page-max);
-  margin: 0 auto 34px;
-  padding: 28px 24px 18px;
-  border-top: 1px solid rgba(241, 214, 191, 0.95);
-  background: linear-gradient(180deg, rgba(255, 246, 234, 0.98) 0%, rgba(246, 235, 220, 0.92) 55%, rgba(242, 228, 210, 0.88) 100%);
-  border-radius: 14px;
+  margin: 0 auto;
+  padding: 0 24px 28px;
   display: grid;
-  gap: 18px;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 26px;
 }
 
-.footer-left {
-  display: grid;
-  gap: 8px;
-  color: var(--ink-500);
+.footer-about h3 {
+  color: #9b3e2b;
+  font-size: 40px;
+  line-height: 1.15;
+  margin-bottom: 10px;
 }
 
-.footer-links {
+.footer-about p {
+  max-width: 360px;
+  font-size: 16px;
+  color: #7a5b47;
+  margin-bottom: 16px;
+}
+
+.social-links {
   display: flex;
-  flex-wrap: wrap;
   gap: 14px;
-  font-weight: 600;
-  color: var(--ink-700);
 }
 
-.footer-meta {
+.social-links a {
+  color: #c14f35;
+  font-size: 20px;
+}
+
+.social-links a:hover {
+  color: #8f3321;
+}
+
+.footer-col {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.footer-col h4 {
+  color: #9b3e2b;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.footer-col a {
+  color: #6f5342;
+  font-size: 16px;
+}
+
+.footer-col a:hover {
+  color: #8f3321;
+}
+
+.footer-bottom {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 18px 24px 0;
+  border-top: 1px solid rgba(159, 105, 77, 0.28);
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--ink-500);
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 15px;
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 22px;
+}
+
+.footer-bottom-links a {
+  color: #6f5342;
+}
+
+.footer-bottom-links a:hover {
+  color: #8f3321;
 }
 
 @media (max-width: 960px) {
@@ -943,6 +1002,10 @@ body:not(.perf-lite) .site-footer {
   .split-panel {
     grid-template-columns: 1fr;
   }
+
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -970,6 +1033,10 @@ body:not(.perf-lite) .site-footer {
 
   .cta {
     align-items: flex-start;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
   }
 }
 
