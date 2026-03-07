@@ -2,6 +2,9 @@
   const api = window.messDataApi;
   if (!api) return;
   const ROLE_STORAGE_KEY = "messplans_role";
+  const MESS_NAME_KEY_PREFIX = "messplans_vendor_mess_name_";
+  const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
   try {
     window.localStorage.setItem(ROLE_STORAGE_KEY, "vendor");
   } catch (_) {
@@ -17,10 +20,14 @@
   const submitBtn = document.getElementById("submitBtn");
   const formTitle = document.getElementById("formTitle");
   const logoutBtn = document.getElementById("logoutBtn");
+  const messSetup = document.getElementById("messSetup");
+  const messPropertyName = document.getElementById("messPropertyName");
+  const messSetupMessage = document.getElementById("messSetupMessage");
+  const saveMessNameBtn = document.getElementById("saveMessNameBtn");
+  const messIdentity = document.getElementById("messIdentity");
 
   const fields = {
     menuId: document.getElementById("menuId"),
-    messName: document.getElementById("messName"),
     tier: document.getElementById("tier"),
     menuDate: document.getElementById("menuDate"),
     price: document.getElementById("price"),
@@ -34,6 +41,29 @@
   };
 
   let currentUser = null;
+  let vendorMenusAll = [];
+  let lockedMessName = "";
+
+  const authClient =
+    window.supabase && typeof window.supabase.createClient === "function"
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+      : null;
+
+  const getMessStorageKey = () => `${MESS_NAME_KEY_PREFIX}${currentUser?.id || "anonymous"}`;
+  const readPersistedMessName = () => {
+    try {
+      return String(window.localStorage.getItem(getMessStorageKey()) || "").trim();
+    } catch {
+      return "";
+    }
+  };
+  const persistMessName = (name) => {
+    try {
+      window.localStorage.setItem(getMessStorageKey(), String(name || "").trim());
+    } catch {
+      // Ignore storage errors.
+    }
+  };
 
   const setMessage = (text, type = "") => {
     formMessage.textContent = text;
@@ -41,8 +71,28 @@
     if (type) formMessage.classList.add(type);
   };
 
+  const setSetupMessage = (text, type = "") => {
+    if (!messSetupMessage) return;
+    messSetupMessage.textContent = text;
+    messSetupMessage.className = "message";
+    if (type) messSetupMessage.classList.add(type);
+  };
+
   const setStorageMode = (mode) => {
     storageMode.textContent = `Storage: ${mode === "cloud" ? "Supabase" : "Local fallback"}`;
+  };
+
+  const setMessLock = () => {
+    const isLocked = Boolean(lockedMessName);
+    if (messSetup) {
+      messSetup.style.display = isLocked ? "none" : "block";
+    }
+    if (messIdentity) {
+      messIdentity.textContent = isLocked
+        ? `Mess: ${lockedMessName} (fixed for this vendor account)`
+        : "Set your mess name first, then publish daily menus.";
+    }
+    submitBtn.disabled = !isLocked;
   };
 
   const resetForm = () => {
@@ -85,7 +135,6 @@
 
   const fillForm = (menu) => {
     fields.menuId.value = menu.id;
-    fields.messName.value = menu.mess_name;
     fields.tier.value = menu.tier;
     fields.menuDate.value = menu.menu_date;
     fields.price.value = menu.price;
@@ -103,7 +152,7 @@
 
   const readForm = () => ({
     id: fields.menuId.value || undefined,
-    mess_name: fields.messName.value.trim(),
+    mess_name: lockedMessName,
     tier: fields.tier.value,
     menu_date: fields.menuDate.value,
     price: Number(fields.price.value || 0),
@@ -120,12 +169,26 @@
   });
 
   const validate = (payload) => {
-    if (!payload.mess_name) return "Mess name is required.";
+    if (!payload.mess_name) return "Set your mess name first.";
     if (!payload.menu_date) return "Menu date is required.";
     if (!payload.menu_items.length) return "Add at least one menu item.";
     if (payload.price <= 0) return "Price must be greater than 0.";
     if (payload.rating < 1 || payload.rating > 5) return "Rating must be between 1 and 5.";
     return "";
+  };
+
+  const refreshVendorMenusAll = async () => {
+    const { rows, mode } = await api.listVendorMenus({ ownerId: currentUser?.id });
+    vendorMenusAll = rows;
+    setStorageMode(mode);
+    lockedMessName =
+      vendorMenusAll[0]?.mess_name ||
+      String(currentUser?.user_metadata?.mess_name || "").trim() ||
+      readPersistedMessName();
+    if (lockedMessName) {
+      persistMessName(lockedMessName);
+    }
+    setMessLock();
   };
 
   const loadCards = async () => {
@@ -145,6 +208,12 @@
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const payload = readForm();
+
+    const existingForDay = vendorMenusAll.find((menu) => menu.menu_date === payload.menu_date);
+    if (existingForDay && !payload.id) {
+      payload.id = existingForDay.id;
+    }
+
     const problem = validate(payload);
     if (problem) {
       setMessage(problem, "error");
@@ -157,7 +226,8 @@
     try {
       const { mode } = await api.upsertMenu(payload, currentUser?.id || "");
       setStorageMode(mode);
-      setMessage("Menu card saved successfully.", "success");
+      setMessage(existingForDay ? "Daily menu updated successfully." : "Menu card saved successfully.", "success");
+      await refreshVendorMenusAll();
       await loadCards();
       resetForm();
     } catch (error) {
@@ -179,6 +249,7 @@
       const ok = window.confirm("Delete this menu card?");
       if (!ok) return;
       await api.deleteMenu(id, currentUser?.id || "");
+      await refreshVendorMenusAll();
       await loadCards();
       setMessage("Menu card deleted.", "success");
       return;
@@ -203,23 +274,40 @@
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
-      if (window.supabase && typeof window.supabase.createClient === "function") {
-        const client = window.supabase.createClient(
-          "https://pdhqcqjyhkptoxlbkiif.supabase.co",
-          "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w",
-        );
-        await client.auth.signOut();
+      if (authClient) {
+        await authClient.auth.signOut();
       }
       window.location.href = "login.html";
+    });
+  }
+
+  if (saveMessNameBtn) {
+    saveMessNameBtn.addEventListener("click", async () => {
+      const value = String(messPropertyName?.value || "").trim();
+      if (!value) {
+        setSetupMessage("Enter a mess name.", "error");
+        return;
+      }
+      lockedMessName = value;
+      persistMessName(lockedMessName);
+      if (authClient) {
+        await authClient.auth.updateUser({ data: { mess_name: lockedMessName } });
+      }
+      setMessLock();
+      setSetupMessage("");
+      setMessage("Mess name saved. You can now update daily menu.", "success");
     });
   }
 
   const init = async () => {
     currentUser = await api.getCurrentUser();
     fields.menuDate.value = api.toIsoDay(new Date());
+    await refreshVendorMenusAll();
+    if (lockedMessName) {
+      setMessage(`Mess locked as "${lockedMessName}". You can update daily menu only.`, "success");
+    }
     await loadCards();
   };
 
   init();
 })();
-

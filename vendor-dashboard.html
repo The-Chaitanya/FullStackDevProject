@@ -32,13 +32,19 @@
       <section class="panel form-panel">
         <h2 id="formTitle">Create Daily Menu Card</h2>
         <p class="muted">One card per mess per day (you can edit anytime).</p>
+        <div id="messSetup" class="mess-setup">
+          <label>
+            Mess Name (set once)
+            <input id="messPropertyName" type="text" placeholder="e.g. Spice Hub Mess" />
+          </label>
+          <div class="form-actions">
+            <button id="saveMessNameBtn" type="button" class="primary-btn">Save Mess Name</button>
+          </div>
+          <p id="messSetupMessage" class="message" role="status" aria-live="polite"></p>
+        </div>
+        <p id="messIdentity" class="mess-identity"></p>
         <form id="vendorMenuForm" novalidate>
           <input type="hidden" id="menuId" />
-
-          <label>
-            Mess Name
-            <input id="messName" type="text" placeholder="e.g. Spice Hub Mess" required />
-          </label>
 
           <div class="grid-2">
             <label>

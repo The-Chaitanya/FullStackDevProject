@@ -115,10 +115,13 @@
   };
 
   const listVendorMenus = async ({ ownerId, date } = {}) => {
-    const day = toIsoDay(date || new Date());
+    const hasDate = typeof date !== "undefined" && date !== null && String(date).trim() !== "";
+    const day = hasDate ? toIsoDay(date) : null;
     if (!client) {
       return {
-        rows: readLocal().filter((menu) => menu.menu_date === day && (!ownerId || menu.owner_id === ownerId)),
+        rows: readLocal().filter(
+          (menu) => (!hasDate || menu.menu_date === day) && (!ownerId || menu.owner_id === ownerId),
+        ),
         mode: "local",
       };
     }
@@ -127,15 +130,17 @@
       let query = client
         .from(TABLE_NAME)
         .select("id, owner_id, mess_name, tier, price, rating, timings, crowd, distance, special, menu_items, vegetarian_only, menu_date, updated_at")
-        .eq("menu_date", day)
         .order("updated_at", { ascending: false });
+      if (hasDate) query = query.eq("menu_date", day);
       if (ownerId) query = query.eq("owner_id", ownerId);
       const { data, error } = await query;
       if (error) throw error;
       return { rows: (data || []).map(normalizeMenu), mode: "cloud" };
     } catch {
       return {
-        rows: readLocal().filter((menu) => menu.menu_date === day && (!ownerId || menu.owner_id === ownerId)),
+        rows: readLocal().filter(
+          (menu) => (!hasDate || menu.menu_date === day) && (!ownerId || menu.owner_id === ownerId),
+        ),
         mode: "local",
       };
     }

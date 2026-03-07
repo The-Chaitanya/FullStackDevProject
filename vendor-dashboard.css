@@ -165,6 +165,20 @@ textarea {
   color: var(--success);
 }
 
+.mess-setup {
+  border: 1px dashed #e7c3b3;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fffaf7;
+}
+
+.mess-identity {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: #7a3a2a;
+}
+
 .form-actions,
 .list-header {
   display: flex;
