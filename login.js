@@ -101,6 +101,7 @@ const getRedirectForForm = (form) =>
   form && form.id === "studentForm" ? STUDENT_REDIRECT_URL : VENDOR_REDIRECT_URL;
 
 const getRoleForForm = (form) => (form && form.id === "studentForm" ? "student" : "vendor");
+const normalizeRole = (value) => (String(value || "").toLowerCase() === "vendor" ? "vendor" : "student");
 
 const persistRole = (role) => {
   try {
@@ -154,7 +155,21 @@ const handlePasswordLogin = async (form) => {
       return;
     }
     if (data?.session) {
-      await supabaseClient.auth.updateUser({ data: { role } });
+      const existingRoleRaw = data?.user?.user_metadata?.role;
+      const existingRole = existingRoleRaw ? normalizeRole(existingRoleRaw) : "";
+      if (existingRole && existingRole !== role) {
+        await supabaseClient.auth.signOut();
+        setFormMessage(
+          form,
+          `This account is registered as ${existingRole}. Please use ${existingRole} login.`,
+          "error",
+        );
+        setFormBusy(form, false);
+        return;
+      }
+      if (!existingRole) {
+        await supabaseClient.auth.updateUser({ data: { role } });
+      }
       setFormMessage(form, "Signed in. Redirecting...", "success");
       window.location.href = withRoleQuery(getRedirectForForm(form), role);
     } else {

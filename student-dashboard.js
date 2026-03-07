@@ -2,11 +2,14 @@
   const api = window.messDataApi;
   if (!api) return;
   const ROLE_STORAGE_KEY = "messplans_role";
-  try {
-    window.localStorage.setItem(ROLE_STORAGE_KEY, "student");
-  } catch (_) {
-    // Ignore storage errors.
-  }
+  const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
+  const authClient =
+    window.supabase && typeof window.supabase.createClient === "function"
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+      : null;
+
+  const normalizeRole = (value) => (String(value || "").toLowerCase() === "vendor" ? "vendor" : "student");
 
   const searchInput = document.querySelector('.filter-bar input[type="search"]');
   const tierSelect = document.querySelector('.filter-bar select:nth-of-type(1)');
@@ -147,6 +150,38 @@
     );
   };
 
+  const ensureStudentRole = async () => {
+    const hintedRole = normalizeRole(
+      new URLSearchParams(window.location.search).get("role") ||
+        (() => {
+          try {
+            return window.localStorage.getItem(ROLE_STORAGE_KEY);
+          } catch {
+            return "student";
+          }
+        })(),
+    );
+
+    let accountRole = "";
+    if (authClient) {
+      const { data } = await authClient.auth.getUser();
+      accountRole = data?.user?.user_metadata?.role ? normalizeRole(data.user.user_metadata.role) : "";
+    }
+
+    const effectiveRole = accountRole || hintedRole;
+    if (effectiveRole === "vendor") {
+      window.location.href = "vendor-dashboard.html?role=vendor";
+      return false;
+    }
+
+    try {
+      window.localStorage.setItem(ROLE_STORAGE_KEY, "student");
+    } catch {
+      // Ignore storage errors.
+    }
+    return true;
+  };
+
   if (dateInput) {
     dateInput.value = api.toIsoDay(new Date());
     dateInput.addEventListener("change", loadMenus);
@@ -166,7 +201,12 @@
     });
   }
 
-  loadMenus();
-  window.setInterval(loadMenus, 60000);
-})();
+  const init = async () => {
+    const allowed = await ensureStudentRole();
+    if (!allowed) return;
+    loadMenus();
+    window.setInterval(loadMenus, 60000);
+  };
 
+  init();
+})();

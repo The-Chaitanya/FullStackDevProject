@@ -5,11 +5,7 @@
   const MESS_NAME_KEY_PREFIX = "messplans_vendor_mess_name_";
   const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
   const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
-  try {
-    window.localStorage.setItem(ROLE_STORAGE_KEY, "vendor");
-  } catch (_) {
-    // Ignore storage errors.
-  }
+  const normalizeRole = (value) => (String(value || "").toLowerCase() === "vendor" ? "vendor" : "student");
 
   const form = document.getElementById("vendorMenuForm");
   const formMessage = document.getElementById("formMessage");
@@ -48,6 +44,39 @@
     window.supabase && typeof window.supabase.createClient === "function"
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
       : null;
+
+  const ensureVendorRole = async () => {
+    const hintedRole = normalizeRole(
+      new URLSearchParams(window.location.search).get("role") ||
+        (() => {
+          try {
+            return window.localStorage.getItem(ROLE_STORAGE_KEY);
+          } catch {
+            return "vendor";
+          }
+        })(),
+    );
+
+    let accountRole = "";
+    if (authClient) {
+      const { data } = await authClient.auth.getUser();
+      accountRole = data?.user?.user_metadata?.role ? normalizeRole(data.user.user_metadata.role) : "";
+    }
+
+    const effectiveRole = accountRole || hintedRole;
+    if (effectiveRole !== "vendor") {
+      window.location.href = "student-dashboard.html?role=student";
+      return false;
+    }
+
+    try {
+      window.localStorage.setItem(ROLE_STORAGE_KEY, "vendor");
+    } catch {
+      // Ignore storage errors.
+    }
+
+    return true;
+  };
 
   const getMessStorageKey = () => `${MESS_NAME_KEY_PREFIX}${currentUser?.id || "anonymous"}`;
   const readPersistedMessName = () => {
@@ -300,6 +329,8 @@
   }
 
   const init = async () => {
+    const allowed = await ensureVendorRole();
+    if (!allowed) return;
     currentUser = await api.getCurrentUser();
     fields.menuDate.value = api.toIsoDay(new Date());
     await refreshVendorMenusAll();
