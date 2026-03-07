@@ -878,12 +878,13 @@ body:not(.perf-lite) .site-footer {
 
 .site-footer {
   max-width: var(--page-max);
-  margin: 0 auto 40px;
-  padding: 24px 8px 0;
-  border-top: 1px solid var(--sand-200);
-  background: linear-gradient(180deg, rgba(255, 248, 238, 0.9) 0%, rgba(245, 234, 220, 0.45) 100%);
+  margin: 0 auto 34px;
+  padding: 28px 24px 18px;
+  border-top: 1px solid rgba(241, 214, 191, 0.95);
+  background: linear-gradient(180deg, rgba(255, 246, 234, 0.98) 0%, rgba(246, 235, 220, 0.92) 55%, rgba(242, 228, 210, 0.88) 100%);
+  border-radius: 14px;
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .footer-left {
