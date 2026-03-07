@@ -647,6 +647,7 @@ select:focus-visible {
   z-index: 120;
   display: grid;
   place-items: center;
+  padding: 24px;
 }
 
 .menu-modal-backdrop {
@@ -658,13 +659,15 @@ select:focus-visible {
 .menu-modal-panel {
   position: relative;
   width: min(680px, calc(100% - 28px));
-  max-height: min(80vh, 760px);
+  max-height: calc(100vh - 48px);
   overflow: auto;
+  overscroll-behavior: contain;
   border-radius: 18px;
   border: 1px solid var(--peach-200);
   background: #fff;
   box-shadow: 0 24px 40px rgba(0, 0, 0, 0.24);
   padding: 18px;
+  margin: 0 auto;
 }
 
 .menu-modal-header {

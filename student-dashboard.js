@@ -25,6 +25,7 @@
   const noResultsState = document.getElementById("noResultsState");
   const menuModal = document.getElementById("menuModal");
   const menuModalClose = document.getElementById("menuModalClose");
+  const menuModalPanel = document.querySelector(".menu-modal-panel");
   const menuModalTitle = document.getElementById("menuModalTitle");
   const menuModalMeta = document.getElementById("menuModalMeta");
   const menuModalItems = document.getElementById("menuModalItems");
@@ -173,6 +174,9 @@
     paintStars(myScore || 0);
     if (ratingMessage) ratingMessage.textContent = myScore ? `Your rating: ${myScore}/5` : "";
 
+    if (menuModalPanel) {
+      menuModalPanel.scrollTop = 0;
+    }
     menuModal.hidden = false;
     document.body.style.overflow = "hidden";
   };
