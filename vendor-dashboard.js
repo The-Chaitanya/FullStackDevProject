@@ -21,6 +21,11 @@
   const messSetupMessage = document.getElementById("messSetupMessage");
   const saveMessNameBtn = document.getElementById("saveMessNameBtn");
   const messIdentity = document.getElementById("messIdentity");
+  const mapMessage = document.getElementById("mapMessage");
+  const useCurrentLocationBtn = document.getElementById("useCurrentLocationBtn");
+  const openMapsBtn = document.getElementById("openMapsBtn");
+  const vendorMapPreview = document.getElementById("vendorMapPreview");
+  const mapsLink = document.getElementById("mapsLink");
 
   const fields = {
     menuId: document.getElementById("menuId"),
@@ -32,6 +37,7 @@
     crowd: document.getElementById("crowd"),
     distance: document.getElementById("distance"),
     messCoords: document.getElementById("messCoords"),
+    mapsLink: document.getElementById("mapsLink"),
     menuItems: document.getElementById("menuItems"),
     special: document.getElementById("special"),
     vegetarianOnly: document.getElementById("vegetarianOnly"),
@@ -61,11 +67,52 @@
     return { lat, lng };
   };
 
+  const parseMapsUrlCoords = (urlLike) => {
+    const text = String(urlLike || "").trim();
+    if (!text) return null;
+    try {
+      const url = new URL(text);
+      const directAt = url.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+      if (directAt) return parseCoordsInput(`${directAt[1]},${directAt[2]}`);
+      const q = url.searchParams.get("q") || url.searchParams.get("query");
+      const ll = url.searchParams.get("ll");
+      const daddr = url.searchParams.get("daddr");
+      const dest = url.searchParams.get("destination");
+      const maybeCoords = q || ll || daddr || dest;
+      if (maybeCoords) {
+        const parsed = parseCoordsInput(maybeCoords);
+        if (parsed) return parsed;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
   const withGeoMeta = (distance, coordsRaw) => {
     const cleanDistance = String(distance || "").trim();
     const coords = parseCoordsInput(coordsRaw);
     if (!coords) return cleanDistance;
     return `${cleanDistance} [geo:${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}]`;
+  };
+
+  const setMapMessage = (text, type = "") => {
+    if (!mapMessage) return;
+    mapMessage.textContent = text;
+    mapMessage.className = "message";
+    if (type) mapMessage.classList.add(type);
+  };
+
+  const updateMapPreview = (coords) => {
+    if (!vendorMapPreview) return;
+    if (!coords) {
+      vendorMapPreview.removeAttribute("src");
+      vendorMapPreview.hidden = true;
+      return;
+    }
+    const query = `${coords.lat},${coords.lng}`;
+    vendorMapPreview.src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=16&output=embed`;
+    vendorMapPreview.hidden = false;
   };
 
   let currentUser = null;
@@ -163,6 +210,9 @@
     fields.rating.value = "4.5";
     fields.tier.value = "UNLIMITED";
     if (fields.messCoords) fields.messCoords.value = "";
+    if (fields.mapsLink) fields.mapsLink.value = "";
+    updateMapPreview(null);
+    setMapMessage("");
     formTitle.textContent = "Create Daily Menu Card";
     submitBtn.textContent = "Save Menu Card";
     setMessage("");
@@ -208,6 +258,8 @@
     fields.distance.value = parsedGeo.display;
     fields.messCoords.value =
       parsedGeo.lat !== null && parsedGeo.lng !== null ? `${parsedGeo.lat},${parsedGeo.lng}` : "";
+    if (fields.mapsLink) fields.mapsLink.value = "";
+    updateMapPreview(parsedGeo.lat !== null && parsedGeo.lng !== null ? { lat: parsedGeo.lat, lng: parsedGeo.lng } : null);
     fields.menuItems.value = menu.menu_items.join("\n");
     fields.special.value = menu.special;
     fields.vegetarianOnly.checked = Boolean(menu.vegetarian_only);
@@ -216,23 +268,34 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const readForm = () => ({
-    id: fields.menuId.value || undefined,
-    mess_name: lockedMessName,
-    tier: fields.tier.value,
-    menu_date: fields.menuDate.value,
-    price: Number(fields.price.value || 0),
-    rating: Number(fields.rating.value || 0),
-    timings: fields.timings.value.trim(),
-    crowd: fields.crowd.value.trim(),
-    distance: withGeoMeta(fields.distance.value.trim(), fields.messCoords.value.trim()),
-    menu_items: fields.menuItems.value
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean),
-    special: fields.special.value.trim(),
-    vegetarian_only: fields.vegetarianOnly.checked,
-  });
+  const readForm = () => {
+    if (!fields.messCoords.value.trim()) {
+      const parsedFromLink = parseMapsUrlCoords(fields.mapsLink?.value || "");
+      if (parsedFromLink) {
+        fields.messCoords.value = `${parsedFromLink.lat.toFixed(6)},${parsedFromLink.lng.toFixed(6)}`;
+        updateMapPreview(parsedFromLink);
+        setMapMessage("Coordinates extracted from Google Maps link.", "success");
+      }
+    }
+
+    return {
+      id: fields.menuId.value || undefined,
+      mess_name: lockedMessName,
+      tier: fields.tier.value,
+      menu_date: fields.menuDate.value,
+      price: Number(fields.price.value || 0),
+      rating: Number(fields.rating.value || 0),
+      timings: fields.timings.value.trim(),
+      crowd: fields.crowd.value.trim(),
+      distance: withGeoMeta(fields.distance.value.trim(), fields.messCoords.value.trim()),
+      menu_items: fields.menuItems.value
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      special: fields.special.value.trim(),
+      vegetarian_only: fields.vegetarianOnly.checked,
+    };
+  };
 
   const validate = (payload) => {
     if (!payload.mess_name) return "Set your mess name first.";
@@ -365,6 +428,72 @@
       setMessLock();
       setSetupMessage("");
       setMessage("Mess name saved. You can now update daily menu.", "success");
+    });
+  }
+
+  if (openMapsBtn) {
+    openMapsBtn.addEventListener("click", () => {
+      window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer");
+    });
+  }
+
+  if (useCurrentLocationBtn) {
+    useCurrentLocationBtn.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        setMapMessage("Geolocation is not supported in this browser.", "error");
+        return;
+      }
+      useCurrentLocationBtn.disabled = true;
+      setMapMessage("Getting current location...");
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            lat: Number(position.coords.latitude),
+            lng: Number(position.coords.longitude),
+          };
+          fields.messCoords.value = `${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}`;
+          updateMapPreview(coords);
+          setMapMessage("Location set from current position.", "success");
+          useCurrentLocationBtn.disabled = false;
+        },
+        () => {
+          setMapMessage("Could not get location. Allow location permission and retry.", "error");
+          useCurrentLocationBtn.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      );
+    });
+  }
+
+  if (mapsLink) {
+    const resolveFromLink = () => {
+      const parsed = parseMapsUrlCoords(mapsLink.value);
+      if (!parsed) {
+        if (mapsLink.value.trim()) setMapMessage("Could not read coordinates from this Google Maps link.", "error");
+        return;
+      }
+      fields.messCoords.value = `${parsed.lat.toFixed(6)},${parsed.lng.toFixed(6)}`;
+      updateMapPreview(parsed);
+      setMapMessage("Coordinates extracted from Google Maps link.", "success");
+    };
+    mapsLink.addEventListener("change", resolveFromLink);
+    mapsLink.addEventListener("blur", resolveFromLink);
+  }
+
+  if (fields.messCoords) {
+    fields.messCoords.addEventListener("change", () => {
+      const parsed = parseCoordsInput(fields.messCoords.value);
+      if (!parsed) {
+        if (fields.messCoords.value.trim()) {
+          setMapMessage("Coordinates must be in format: lat,lng", "error");
+        } else {
+          setMapMessage("");
+        }
+        updateMapPreview(null);
+        return;
+      }
+      updateMapPreview(parsed);
+      setMapMessage("Coordinates set.", "success");
     });
   }
 

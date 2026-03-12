@@ -187,6 +187,25 @@ textarea {
   gap: 10px;
 }
 
+.map-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vendor-map-preview {
+  width: 100%;
+  height: 220px;
+  border: 1px solid #e5cec0;
+  border-radius: 12px;
+  background: #faf6f4;
+}
+
+.vendor-map-preview:empty,
+.vendor-map-preview:not([src]) {
+  display: none;
+}
+
 button,
 .ghost-link {
   border: 0;
@@ -285,5 +304,10 @@ button,
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .map-tools {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }

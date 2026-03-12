@@ -92,6 +92,22 @@
             Mess Coordinates (optional, for exact student distance)
             <input id="messCoords" type="text" placeholder="18.5204,73.8567" />
           </label>
+          <div class="map-tools">
+            <button id="useCurrentLocationBtn" type="button" class="ghost-btn">Use Current Location</button>
+            <button id="openMapsBtn" type="button" class="ghost-btn">Open Google Maps</button>
+          </div>
+          <label>
+            Google Maps Link (optional)
+            <input id="mapsLink" type="url" placeholder="Paste Google Maps share link here" />
+          </label>
+          <p id="mapMessage" class="message" role="status" aria-live="polite"></p>
+          <iframe
+            id="vendorMapPreview"
+            class="vendor-map-preview"
+            title="Vendor location preview"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
 
           <label>
             Menu Items (one per line)
