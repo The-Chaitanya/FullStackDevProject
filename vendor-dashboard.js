@@ -149,6 +149,7 @@
   let currentUser = null;
   let vendorMenusAll = [];
   let lockedMessName = "";
+  let lockedMessCoords = "";
   let locationMap = null;
   let locationMarker = null;
   let pendingMapCoords = null;
@@ -207,6 +208,31 @@
     }
   };
 
+  const persistCoords = async (coordsText) => {
+    const value = String(coordsText || "").trim();
+    lockedMessCoords = value;
+    const parsed = parseCoordsInput(value);
+    if (currentUser?.id && parsed) {
+      try {
+        await api.saveUserLocation({
+          userId: currentUser.id,
+          role: "vendor",
+          latitude: parsed.lat,
+          longitude: parsed.lng,
+        });
+      } catch {
+        // Ignore save errors here; validation/UX handled elsewhere.
+      }
+    }
+    if (authClient && currentUser && value) {
+      try {
+        await authClient.auth.updateUser({ data: { mess_coords: value } });
+      } catch {
+        // Ignore profile update errors.
+      }
+    }
+  };
+
   const setMessage = (text, type = "") => {
     formMessage.textContent = text;
     formMessage.className = "message";
@@ -243,10 +269,12 @@
     fields.menuDate.value = api.toIsoDay(new Date());
     fields.rating.value = "4.5";
     fields.tier.value = "UNLIMITED";
-    if (fields.messCoords) fields.messCoords.value = "";
+    if (fields.messCoords) fields.messCoords.value = lockedMessCoords || "";
     if (fields.mapsLink) fields.mapsLink.value = "";
-    pendingMapCoords = null;
-    updateMapPreview(null);
+    const parsed = parseCoordsInput(lockedMessCoords || "");
+    pendingMapCoords = parsed;
+    updateMapPreview(parsed);
+    setMapMarker(parsed);
     setMapMessage("");
     formTitle.textContent = "Create Daily Menu Card";
     submitBtn.textContent = "Save Menu Card";
@@ -292,7 +320,7 @@
     fields.crowd.value = menu.crowd;
     fields.distance.value = parsedGeo.display;
     fields.messCoords.value =
-      parsedGeo.lat !== null && parsedGeo.lng !== null ? `${parsedGeo.lat},${parsedGeo.lng}` : "";
+      parsedGeo.lat !== null && parsedGeo.lng !== null ? `${parsedGeo.lat},${parsedGeo.lng}` : lockedMessCoords;
     if (fields.mapsLink) fields.mapsLink.value = "";
     const coords = parsedGeo.lat !== null && parsedGeo.lng !== null ? { lat: parsedGeo.lat, lng: parsedGeo.lng } : null;
     pendingMapCoords = coords;
@@ -307,6 +335,9 @@
   };
 
   const readForm = () => {
+    if (!fields.messCoords.value.trim() && lockedMessCoords) {
+      fields.messCoords.value = lockedMessCoords;
+    }
     if (!fields.messCoords.value.trim()) {
       const parsedFromLink = parseMapsUrlCoords(fields.mapsLink?.value || "");
       if (parsedFromLink) {
@@ -398,6 +429,7 @@
 
     try {
       const { mode } = await api.upsertMenu(payload, currentUser?.id || "");
+      await persistCoords(fields.messCoords.value.trim());
       setStorageMode(mode);
       setMessage(existingForDay ? "Daily menu updated successfully." : "Menu card saved successfully.", "success");
       await refreshVendorMenusAll();
@@ -489,6 +521,7 @@
       }
       fields.messCoords.value = `${pendingMapCoords.lat.toFixed(6)},${pendingMapCoords.lng.toFixed(6)}`;
       updateMapPreview(pendingMapCoords);
+      persistCoords(fields.messCoords.value.trim());
       setMapMessage("Location set from map selection.", "success");
     });
   }
@@ -512,6 +545,7 @@
           initLocationMap();
           setMapMarker(coords);
           updateMapPreview(coords);
+          persistCoords(fields.messCoords.value.trim());
           setMapMessage("Location set from current position.", "success");
           useCurrentLocationBtn.disabled = false;
         },
@@ -536,6 +570,7 @@
       initLocationMap();
       setMapMarker(parsed);
       updateMapPreview(parsed);
+      persistCoords(fields.messCoords.value.trim());
       setMapMessage("Coordinates extracted from Google Maps link.", "success");
     };
     mapsLink.addEventListener("change", resolveFromLink);
@@ -558,6 +593,7 @@
       initLocationMap();
       setMapMarker(parsed);
       updateMapPreview(parsed);
+      persistCoords(fields.messCoords.value.trim());
       setMapMessage("Coordinates set.", "success");
     });
   }
@@ -566,8 +602,18 @@
     const allowed = await ensureVendorRole();
     if (!allowed) return;
     currentUser = await api.getCurrentUser();
+    const storedVendorLocation = currentUser?.id ? await api.getUserLocation(currentUser.id, "vendor") : null;
+    lockedMessCoords =
+      storedVendorLocation && Number.isFinite(storedVendorLocation.latitude) && Number.isFinite(storedVendorLocation.longitude)
+        ? `${storedVendorLocation.latitude},${storedVendorLocation.longitude}`
+        : String(currentUser?.user_metadata?.mess_coords || "").trim();
     fields.menuDate.value = api.toIsoDay(new Date());
     initLocationMap();
+    if (fields.messCoords) fields.messCoords.value = lockedMessCoords;
+    const startupCoords = parseCoordsInput(lockedMessCoords || "");
+    pendingMapCoords = startupCoords;
+    updateMapPreview(startupCoords);
+    setMapMarker(startupCoords);
     await refreshVendorMenusAll();
     if (lockedMessName) {
       setMessage(`Mess locked as "${lockedMessName}". You can update daily menu only.`, "success");

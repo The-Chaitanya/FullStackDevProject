@@ -449,14 +449,26 @@
     if (useMyLocationBtn) useMyLocationBtn.disabled = true;
     setLocationStatus("Detecting your location...");
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         userCoords = {
           lat: Number(position.coords.latitude),
           lng: Number(position.coords.longitude),
         };
+        if (currentStudent?.id) {
+          try {
+            await api.saveUserLocation({
+              userId: currentStudent.id,
+              role: "student",
+              latitude: userCoords.lat,
+              longitude: userCoords.lng,
+            });
+          } catch {
+            setLocationStatus("Location fetched, but could not save to Supabase.", true);
+          }
+        }
         setLocationStatus(`Location enabled (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}).`);
-        if (useMyLocationBtn) useMyLocationBtn.textContent = "Location On";
-        loadMenus();
+        if (useMyLocationBtn) useMyLocationBtn.textContent = "Update Location";
+        await loadMenus();
         if (useMyLocationBtn) useMyLocationBtn.disabled = false;
       },
       () => {
@@ -696,6 +708,14 @@
       document.body.appendChild(menuModal);
     }
     currentStudent = await api.getCurrentUser();
+    const savedLocation = currentStudent?.id ? await api.getUserLocation(currentStudent.id, "student") : null;
+    if (savedLocation) {
+      userCoords = { lat: savedLocation.latitude, lng: savedLocation.longitude };
+      const savedDate = savedLocation.updated_at ? new Date(savedLocation.updated_at) : null;
+      const savedLabel = savedDate && !Number.isNaN(savedDate.getTime()) ? savedDate.toLocaleString() : "earlier";
+      setLocationStatus(`Using saved location (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}), saved ${savedLabel}.`);
+      if (useMyLocationBtn) useMyLocationBtn.textContent = "Update Location";
+    }
     setFilterOpen(true);
     syncTierChips();
     try {

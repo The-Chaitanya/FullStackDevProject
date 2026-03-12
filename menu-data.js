@@ -3,6 +3,7 @@
   const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
   const TABLE_NAME = "vendor_mess_cards";
   const RATINGS_TABLE = "menu_ratings";
+  const USER_LOCATIONS_TABLE = "user_locations";
   const STORAGE_KEY = "messplans_vendor_menus_v1";
 
   const toIsoDay = (value = new Date()) => {
@@ -314,6 +315,56 @@
     return true;
   };
 
+  const getUserLocation = async (userId = "", role = "") => {
+    if (!client) return null;
+    const uid = String(userId || "").trim();
+    if (!uid) return null;
+    try {
+      let query = client
+        .from(USER_LOCATIONS_TABLE)
+        .select("user_id, role, latitude, longitude, updated_at")
+        .eq("user_id", uid);
+      if (role) query = query.eq("role", String(role).toLowerCase());
+      const { data, error } = await query.maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        user_id: data.user_id,
+        role: String(data.role || "").toLowerCase(),
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        updated_at: data.updated_at || "",
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const saveUserLocation = async ({ userId = "", role = "", latitude, longitude } = {}) => {
+    if (!client) throw new Error("Location service unavailable.");
+    const uid = String(userId || "").trim();
+    const normalizedRole = String(role || "").toLowerCase();
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!uid) throw new Error("Missing user id.");
+    if (!(normalizedRole === "student" || normalizedRole === "vendor")) {
+      throw new Error("Invalid role.");
+    }
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) throw new Error("Invalid latitude.");
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) throw new Error("Invalid longitude.");
+
+    const payload = {
+      user_id: uid,
+      role: normalizedRole,
+      latitude: lat,
+      longitude: lng,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await client.from(USER_LOCATIONS_TABLE).upsert(payload, { onConflict: "user_id,role" });
+    if (error) throw error;
+    return true;
+  };
+
   window.messDataApi = {
     toIsoDay,
     listMenus,
@@ -324,5 +375,7 @@
     getCurrentUser,
     getMyMenuRating,
     rateMenu,
+    getUserLocation,
+    saveUserLocation,
   };
 })();
