@@ -24,6 +24,8 @@
   const mapMessage = document.getElementById("mapMessage");
   const useCurrentLocationBtn = document.getElementById("useCurrentLocationBtn");
   const openMapsBtn = document.getElementById("openMapsBtn");
+  const setMapLocationBtn = document.getElementById("setMapLocationBtn");
+  const vendorLocationMap = document.getElementById("vendorLocationMap");
   const vendorMapPreview = document.getElementById("vendorMapPreview");
   const mapsLink = document.getElementById("mapsLink");
 
@@ -115,9 +117,41 @@
     vendorMapPreview.hidden = false;
   };
 
+  const initLocationMap = () => {
+    if (locationMap || !vendorLocationMap || !window.L) return;
+    locationMap = window.L.map(vendorLocationMap, { zoomControl: true }).setView([18.5204, 73.8567], 13);
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(locationMap);
+
+    locationMap.on("click", (event) => {
+      const coords = {
+        lat: Number(event.latlng.lat),
+        lng: Number(event.latlng.lng),
+      };
+      pendingMapCoords = coords;
+      setMapMarker(coords);
+      setMapMessage(`Selected on map: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`, "success");
+    });
+  };
+
+  const setMapMarker = (coords) => {
+    if (!locationMap || !coords) return;
+    if (!locationMarker) {
+      locationMarker = window.L.marker([coords.lat, coords.lng]).addTo(locationMap);
+    } else {
+      locationMarker.setLatLng([coords.lat, coords.lng]);
+    }
+    locationMap.setView([coords.lat, coords.lng], Math.max(locationMap.getZoom(), 15), { animate: true });
+  };
+
   let currentUser = null;
   let vendorMenusAll = [];
   let lockedMessName = "";
+  let locationMap = null;
+  let locationMarker = null;
+  let pendingMapCoords = null;
 
   const authClient =
     window.supabase && typeof window.supabase.createClient === "function"
@@ -211,6 +245,7 @@
     fields.tier.value = "UNLIMITED";
     if (fields.messCoords) fields.messCoords.value = "";
     if (fields.mapsLink) fields.mapsLink.value = "";
+    pendingMapCoords = null;
     updateMapPreview(null);
     setMapMessage("");
     formTitle.textContent = "Create Daily Menu Card";
@@ -259,7 +294,10 @@
     fields.messCoords.value =
       parsedGeo.lat !== null && parsedGeo.lng !== null ? `${parsedGeo.lat},${parsedGeo.lng}` : "";
     if (fields.mapsLink) fields.mapsLink.value = "";
-    updateMapPreview(parsedGeo.lat !== null && parsedGeo.lng !== null ? { lat: parsedGeo.lat, lng: parsedGeo.lng } : null);
+    const coords = parsedGeo.lat !== null && parsedGeo.lng !== null ? { lat: parsedGeo.lat, lng: parsedGeo.lng } : null;
+    pendingMapCoords = coords;
+    updateMapPreview(coords);
+    setMapMarker(coords);
     fields.menuItems.value = menu.menu_items.join("\n");
     fields.special.value = menu.special;
     fields.vegetarianOnly.checked = Boolean(menu.vegetarian_only);
@@ -273,6 +311,9 @@
       const parsedFromLink = parseMapsUrlCoords(fields.mapsLink?.value || "");
       if (parsedFromLink) {
         fields.messCoords.value = `${parsedFromLink.lat.toFixed(6)},${parsedFromLink.lng.toFixed(6)}`;
+        pendingMapCoords = parsedFromLink;
+        initLocationMap();
+        setMapMarker(parsedFromLink);
         updateMapPreview(parsedFromLink);
         setMapMessage("Coordinates extracted from Google Maps link.", "success");
       }
@@ -433,7 +474,22 @@
 
   if (openMapsBtn) {
     openMapsBtn.addEventListener("click", () => {
-      window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer");
+      initLocationMap();
+      window.requestAnimationFrame(() => locationMap?.invalidateSize());
+      vendorLocationMap?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (pendingMapCoords) setMapMarker(pendingMapCoords);
+    });
+  }
+
+  if (setMapLocationBtn) {
+    setMapLocationBtn.addEventListener("click", () => {
+      if (!pendingMapCoords) {
+        setMapMessage("Pick a point on map first.", "error");
+        return;
+      }
+      fields.messCoords.value = `${pendingMapCoords.lat.toFixed(6)},${pendingMapCoords.lng.toFixed(6)}`;
+      updateMapPreview(pendingMapCoords);
+      setMapMessage("Location set from map selection.", "success");
     });
   }
 
@@ -451,7 +507,10 @@
             lat: Number(position.coords.latitude),
             lng: Number(position.coords.longitude),
           };
+          pendingMapCoords = coords;
           fields.messCoords.value = `${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}`;
+          initLocationMap();
+          setMapMarker(coords);
           updateMapPreview(coords);
           setMapMessage("Location set from current position.", "success");
           useCurrentLocationBtn.disabled = false;
@@ -473,6 +532,9 @@
         return;
       }
       fields.messCoords.value = `${parsed.lat.toFixed(6)},${parsed.lng.toFixed(6)}`;
+      pendingMapCoords = parsed;
+      initLocationMap();
+      setMapMarker(parsed);
       updateMapPreview(parsed);
       setMapMessage("Coordinates extracted from Google Maps link.", "success");
     };
@@ -492,6 +554,9 @@
         updateMapPreview(null);
         return;
       }
+      pendingMapCoords = parsed;
+      initLocationMap();
+      setMapMarker(parsed);
       updateMapPreview(parsed);
       setMapMessage("Coordinates set.", "success");
     });
@@ -502,6 +567,7 @@
     if (!allowed) return;
     currentUser = await api.getCurrentUser();
     fields.menuDate.value = api.toIsoDay(new Date());
+    initLocationMap();
     await refreshVendorMenusAll();
     if (lockedMessName) {
       setMessage(`Mess locked as "${lockedMessName}". You can update daily menu only.`, "success");
