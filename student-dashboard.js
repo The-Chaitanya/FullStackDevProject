@@ -23,6 +23,7 @@
   const filterToggleBtn = document.getElementById("filterToggleBtn");
   const filterContent = document.getElementById("filterContent");
   const noResultsState = document.getElementById("noResultsState");
+  const dashboardLoader = document.getElementById("dashboardLoader");
   const insightCount = document.getElementById("insightCount");
   const insightAvgPrice = document.getElementById("insightAvgPrice");
   const insightTopRated = document.getElementById("insightTopRated");
@@ -47,6 +48,8 @@
   let currentStudent = null;
   let activeMenuId = "";
   let activeStar = 0;
+  let loadSequence = 0;
+  let pendingLoads = 0;
 
   const toneClasses = ["tone-1", "tone-2", "tone-3", "tone-4"];
   const menuByKey = new Map();
@@ -247,6 +250,24 @@
     if (statusEl) statusEl.textContent = text;
   };
 
+  const setDataLoading = (isLoading) => {
+    if (dashboardLoader) dashboardLoader.hidden = !isLoading;
+    document.body.classList.toggle("data-loading", Boolean(isLoading));
+  };
+
+  const finalizeInitialReveal = () => {
+    if (!document.body.classList.contains("page-loaded")) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.body.classList.remove("pre-data");
+          document.body.classList.add("page-loaded");
+        });
+      });
+    } else {
+      document.body.classList.remove("pre-data");
+    }
+  };
+
   const updateInsights = (menus) => {
     const total = menus.length;
     const avgPrice = total
@@ -319,16 +340,30 @@
   };
 
   const loadMenus = async () => {
+    const requestId = ++loadSequence;
+    pendingLoads += 1;
+    if (pendingLoads === 1) setDataLoading(true);
     const filters = readFilters();
     setStatus("Updating cards...");
-    const { rows, mode } = await api.listMenus(filters);
-    const filteredByPrice = rows.filter((menu) => {
-      const price = Number(menu.price || 0);
-      return price >= filters.priceRange.min && price <= filters.priceRange.max;
-    });
-    renderMenus(filteredByPrice);
-    updateInsights(filteredByPrice);
-    setStatus(`Showing ${filteredByPrice.length} option(s) for ${filters.date}${mode === "cloud" ? "" : " (offline data)"}.`);
+    try {
+      const { rows, mode } = await api.listMenus(filters);
+      if (requestId !== loadSequence) return;
+      const filteredByPrice = rows.filter((menu) => {
+        const price = Number(menu.price || 0);
+        return price >= filters.priceRange.min && price <= filters.priceRange.max;
+      });
+      renderMenus(filteredByPrice);
+      updateInsights(filteredByPrice);
+      setStatus(`Showing ${filteredByPrice.length} option(s) for ${filters.date}${mode === "cloud" ? "" : " (offline data)"}.`);
+    } catch (error) {
+      if (requestId !== loadSequence) return;
+      renderMenus([]);
+      updateInsights([]);
+      setStatus("Could not load menus. Please try again.");
+    } finally {
+      pendingLoads = Math.max(0, pendingLoads - 1);
+      if (pendingLoads === 0) setDataLoading(false);
+    }
   };
 
   const ensureStudentRole = async () => {
@@ -559,7 +594,11 @@
     currentStudent = await api.getCurrentUser();
     setFilterOpen(true);
     syncTierChips();
-    loadMenus();
+    try {
+      await loadMenus();
+    } finally {
+      finalizeInitialReveal();
+    }
     window.setInterval(loadMenus, 60000);
   };
 

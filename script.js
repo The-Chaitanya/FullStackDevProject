@@ -1,4 +1,5 @@
 (() => {
+const PAGE_TRANSITION_MS = 320;
 const revealPage = () => {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -7,10 +8,13 @@ const revealPage = () => {
   });
 };
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", revealPage);
-} else {
-  revealPage();
+const deferRevealUntilData = document.body?.hasAttribute("data-reveal-after-data");
+if (!deferRevealUntilData) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", revealPage);
+  } else {
+    revealPage();
+  }
 }
 
 document.querySelectorAll("a[data-transition]").forEach((link) => {
@@ -23,7 +27,7 @@ document.querySelectorAll("a[data-transition]").forEach((link) => {
     document.body.classList.add("page-fade-out");
     setTimeout(() => {
       window.location.href = href;
-    }, 400);
+    }, PAGE_TRANSITION_MS);
   });
 });
 

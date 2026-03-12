@@ -1,12 +1,41 @@
 ﻿(() => {
+  const PAGE_TRANSITION_MS = 320;
   const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
   const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
   const ROLE_STORAGE_KEY = "messplans_role";
+
+  const revealPage = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.body.classList.add("page-loaded");
+      });
+    });
+  };
+
+  if (document.body.classList.contains("page")) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", revealPage);
+    } else {
+      revealPage();
+    }
+  }
 
   const client =
     window.supabase && typeof window.supabase.createClient === "function"
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
       : null;
+
+  const warmDashboardRoute = () => {
+    // Fire-and-forget warmup so dashboard assets start loading during fade-out.
+    try {
+      fetch("student-dashboard.html", { cache: "force-cache" }).catch(() => {});
+      ["style.css", "menu-data.js", "student-dashboard.js", "assets/food-thali.webp", "assets/food-burger.webp"].forEach(
+        (path) => fetch(path, { cache: "force-cache" }).catch(() => {}),
+      );
+    } catch {
+      // Ignore warmup errors.
+    }
+  };
 
   const emailEl = document.getElementById("email");
   const nameEl = document.getElementById("fullName");
@@ -15,6 +44,11 @@
   const statusEl = document.getElementById("status");
   const lastSignInEl = document.getElementById("lastSignIn");
   const logoutBtn = document.getElementById("logoutBtn");
+
+  // Safety guard: avoid runtime errors if script loads on a different page.
+  if (!emailEl || !nameEl || !avatarEl || !statusEl || !lastSignInEl) {
+    return;
+  }
 
   const normalizeRole = (value) => {
     const role = String(value || "").toLowerCase();
@@ -99,6 +133,21 @@
       window.location.href = "login.html";
     });
   }
+
+  document.querySelectorAll("a[data-transition]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const href = link.getAttribute("href");
+      if (!href || href.startsWith("#") || link.target === "_blank") return;
+      event.preventDefault();
+      if (href.includes("student-dashboard.html")) {
+        warmDashboardRoute();
+      }
+      document.body.classList.add("page-fade-out");
+      window.setTimeout(() => {
+        window.location.href = href;
+      }, PAGE_TRANSITION_MS);
+    });
+  });
 
   loadUser();
 })();

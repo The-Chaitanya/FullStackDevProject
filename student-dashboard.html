@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MessBuddy</title>
+    <link rel="preload" as="image" href="assets/food-thali.webp" type="image/webp" fetchpriority="low" />
+    <link rel="preload" as="image" href="assets/food-burger.webp" type="image/webp" fetchpriority="low" />
+    <link rel="prefetch" href="profile.html" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,7 +17,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body class="page student-dashboard">
+  <body class="page student-dashboard pre-data" data-reveal-after-data>
     <header class="site-nav">
       <div class="nav-inner">
         <div class="brand">
@@ -99,6 +102,15 @@
           </form>
         </div>
         <p id="dashboardStatus" class="page-subtitle"></p>
+      </section>
+
+      <section id="dashboardLoader" class="dashboard-loader" aria-live="polite" aria-busy="true">
+        <div class="loader-head skeleton-line"></div>
+        <div class="loader-grid">
+          <div class="loader-card skeleton-block"></div>
+          <div class="loader-card skeleton-block"></div>
+          <div class="loader-card skeleton-block"></div>
+        </div>
       </section>
 
       <section class="insights-grid" aria-label="Quick insights">
