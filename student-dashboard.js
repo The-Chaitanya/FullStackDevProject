@@ -21,8 +21,10 @@
   const filterForm = document.querySelector(".filter-bar");
   const statusEl = document.getElementById("dashboardStatus");
   const filterToggleBtn = document.getElementById("filterToggleBtn");
+  const useMyLocationBtn = document.getElementById("useMyLocationBtn");
   const filterContent = document.getElementById("filterContent");
   const noResultsState = document.getElementById("noResultsState");
+  const locationStatus = document.getElementById("locationStatus");
   const dashboardLoader = document.getElementById("dashboardLoader");
   const insightCount = document.getElementById("insightCount");
   const insightAvgPrice = document.getElementById("insightAvgPrice");
@@ -34,6 +36,9 @@
   const menuModalMeta = document.getElementById("menuModalMeta");
   const menuModalItems = document.getElementById("menuModalItems");
   const menuModalDetails = document.getElementById("menuModalDetails");
+  const menuMapSection = document.getElementById("menuMapSection");
+  const menuMapFrame = document.getElementById("menuMapFrame");
+  const openDirectionsLink = document.getElementById("openDirectionsLink");
   const ratingStarsWrap = document.getElementById("ratingStars");
   const submitRatingBtn = document.getElementById("submitRatingBtn");
   const ratingMessage = document.getElementById("ratingMessage");
@@ -50,6 +55,7 @@
   let activeStar = 0;
   let loadSequence = 0;
   let pendingLoads = 0;
+  let userCoords = null;
 
   const toneClasses = ["tone-1", "tone-2", "tone-3", "tone-4"];
   const menuByKey = new Map();
@@ -95,6 +101,66 @@
 
   const formatPrice = (value) => `Rs ${Number(value || 0).toFixed(0)}`;
 
+  const parseGeoMeta = (rawDistance) => {
+    const value = String(rawDistance || "").trim();
+    const match = value.match(/\s*\[geo:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]\s*$/i);
+    if (!match) return { display: value, lat: null, lng: null };
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    const display = value.replace(match[0], "").trim();
+    return {
+      display,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+    };
+  };
+
+  const toRadians = (deg) => (deg * Math.PI) / 180;
+  const haversineKm = (from, to) => {
+    const earthRadiusKm = 6371;
+    const dLat = toRadians(to.lat - from.lat);
+    const dLng = toRadians(to.lng - from.lng);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRadians(from.lat)) * Math.cos(toRadians(to.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  };
+
+  const resolveDistanceLabel = (menu) => {
+    const parsed = parseGeoMeta(menu.distance);
+    if (userCoords && parsed.lat !== null && parsed.lng !== null) {
+      const km = haversineKm(userCoords, { lat: parsed.lat, lng: parsed.lng });
+      return `${km.toFixed(2)} km from you`;
+    }
+    return parsed.display || "Near campus";
+  };
+
+  const buildGoogleMapUrls = (menu) => {
+    const parsed = parseGeoMeta(menu?.distance);
+    if (parsed.lat === null || parsed.lng === null) return null;
+    const destination = `${parsed.lat},${parsed.lng}`;
+    const embedUrl = `https://www.google.com/maps?q=${encodeURIComponent(destination)}&z=16&output=embed`;
+    const directionsUrl = userCoords
+      ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(`${userCoords.lat},${userCoords.lng}`)}&destination=${encodeURIComponent(destination)}&travelmode=walking`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`;
+    return { embedUrl, directionsUrl };
+  };
+
+  const renderMapSection = (menu) => {
+    if (!menuMapSection || !menuMapFrame || !openDirectionsLink) return;
+    const links = buildGoogleMapUrls(menu);
+    if (!links) {
+      menuMapSection.hidden = true;
+      menuMapFrame.removeAttribute("src");
+      openDirectionsLink.setAttribute("href", "#");
+      return;
+    }
+    menuMapFrame.setAttribute("src", links.embedUrl);
+    openDirectionsLink.setAttribute("href", links.directionsUrl);
+    menuMapSection.hidden = false;
+  };
+
   const createCard = (menu, index) => {
     const article = document.createElement("article");
     article.className = "card";
@@ -108,10 +174,11 @@
     const ratingCountText = ratingCount ? ` (${ratingCount})` : "";
 
     const tone = toneClasses[index % toneClasses.length];
+    const distanceLabel = resolveDistanceLabel(menu);
     const details = `
       <p><span class="label">Timings:</span> ${menu.timings}</p>
       <p><span class="label">Crowd:</span> ${menu.crowd}</p>
-      <p><span class="label">Distance:</span> ${menu.distance}</p>
+      <p><span class="label">Distance:</span> ${distanceLabel}</p>
     `;
 
     article.innerHTML = `
@@ -171,13 +238,15 @@
     }
 
     if (menuModalDetails) {
+      const distanceLabel = resolveDistanceLabel(menu);
       menuModalDetails.innerHTML = `
         <p><strong>Timings:</strong> ${menu.timings || "-"}</p>
         <p><strong>Crowd:</strong> ${menu.crowd || "-"}</p>
-        <p><strong>Distance:</strong> ${menu.distance || "-"}</p>
+        <p><strong>Distance:</strong> ${distanceLabel}</p>
         <p><strong>Date:</strong> ${menu.menu_date || "-"}</p>
       `;
     }
+    renderMapSection(menu);
 
     if (typeof menuModal.showModal === "function" && !menuModal.open) {
       menuModal.showModal();
@@ -248,6 +317,12 @@
 
   const setStatus = (text) => {
     if (statusEl) statusEl.textContent = text;
+  };
+
+  const setLocationStatus = (text, isError = false) => {
+    if (!locationStatus) return;
+    locationStatus.textContent = text;
+    locationStatus.style.color = isError ? "#b82222" : "";
   };
 
   const setDataLoading = (isLoading) => {
@@ -366,6 +441,32 @@
     }
   };
 
+  const requestUserLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus("Location is not supported in this browser.", true);
+      return;
+    }
+    if (useMyLocationBtn) useMyLocationBtn.disabled = true;
+    setLocationStatus("Detecting your location...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        userCoords = {
+          lat: Number(position.coords.latitude),
+          lng: Number(position.coords.longitude),
+        };
+        setLocationStatus(`Location enabled (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}).`);
+        if (useMyLocationBtn) useMyLocationBtn.textContent = "Location On";
+        loadMenus();
+        if (useMyLocationBtn) useMyLocationBtn.disabled = false;
+      },
+      () => {
+        setLocationStatus("Could not get location. Please allow location permission.", true);
+        if (useMyLocationBtn) useMyLocationBtn.disabled = false;
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  };
+
   const ensureStudentRole = async () => {
     const queryRole = new URLSearchParams(window.location.search).get("role");
     const hintedRole = queryRole ? normalizeRole(queryRole) : "";
@@ -429,6 +530,9 @@
       const isOpen = filterToggleBtn.getAttribute("aria-expanded") === "true";
       setFilterOpen(!isOpen);
     });
+  }
+  if (useMyLocationBtn) {
+    useMyLocationBtn.addEventListener("click", requestUserLocation);
   }
 
   if (typeof window.TomSelect === "function") {

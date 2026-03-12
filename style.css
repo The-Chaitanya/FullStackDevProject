@@ -469,6 +469,18 @@ select:focus-visible {
   box-shadow: none;
 }
 
+.filter-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.location-btn {
+  height: 42px;
+  min-width: 156px;
+  box-shadow: none;
+}
+
 .filter-toggle-btn::after {
   content: "▾";
   margin-left: 8px;
@@ -918,6 +930,35 @@ body.data-loading .tier {
   display: grid;
   gap: 6px;
   font-size: 14px;
+}
+
+.menu-map-section {
+  margin-top: 12px;
+  border-top: 1px dashed var(--peach-200);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.menu-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menu-map-link {
+  height: 34px;
+  padding: 8px 12px;
+  box-shadow: none;
+}
+
+.menu-map-frame {
+  width: 100%;
+  height: 220px;
+  border: 1px solid var(--peach-200);
+  border-radius: 12px;
+  background: #f8f8f8;
 }
 
 .menu-modal-rating {

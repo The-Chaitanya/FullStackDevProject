@@ -31,9 +31,41 @@
     timings: document.getElementById("timings"),
     crowd: document.getElementById("crowd"),
     distance: document.getElementById("distance"),
+    messCoords: document.getElementById("messCoords"),
     menuItems: document.getElementById("menuItems"),
     special: document.getElementById("special"),
     vegetarianOnly: document.getElementById("vegetarianOnly"),
+  };
+
+  const parseGeoMeta = (rawDistance) => {
+    const value = String(rawDistance || "").trim();
+    const match = value.match(/\s*\[geo:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]\s*$/i);
+    if (!match) return { display: value, lat: null, lng: null };
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    const display = value.replace(match[0], "").trim();
+    return {
+      display,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+    };
+  };
+
+  const parseCoordsInput = (raw) => {
+    const parts = String(raw || "")
+      .split(",")
+      .map((value) => Number(value.trim()));
+    if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+    const [lat, lng] = parts;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng };
+  };
+
+  const withGeoMeta = (distance, coordsRaw) => {
+    const cleanDistance = String(distance || "").trim();
+    const coords = parseCoordsInput(coordsRaw);
+    if (!coords) return cleanDistance;
+    return `${cleanDistance} [geo:${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}]`;
   };
 
   let currentUser = null;
@@ -130,6 +162,7 @@
     fields.menuDate.value = api.toIsoDay(new Date());
     fields.rating.value = "4.5";
     fields.tier.value = "UNLIMITED";
+    if (fields.messCoords) fields.messCoords.value = "";
     formTitle.textContent = "Create Daily Menu Card";
     submitBtn.textContent = "Save Menu Card";
     setMessage("");
@@ -140,6 +173,7 @@
   const createCard = (menu) => {
     const card = document.createElement("article");
     card.className = "vendor-card";
+    const parsedGeo = parseGeoMeta(menu.distance);
     card.innerHTML = `
       <h3>${menu.mess_name}</h3>
       <div class="vendor-meta">
@@ -153,7 +187,7 @@
       </ul>
       <p class="row"><strong>Special:</strong> ${menu.special}</p>
       <p class="row"><strong>Timings:</strong> ${menu.timings}</p>
-      <p class="row"><strong>Crowd:</strong> ${menu.crowd} | <strong>Distance:</strong> ${menu.distance}</p>
+      <p class="row"><strong>Crowd:</strong> ${menu.crowd} | <strong>Distance:</strong> ${parsedGeo.display}</p>
       <div class="card-actions">
         <button type="button" data-action="edit" data-id="${menu.id}" class="ghost-btn">Edit</button>
         <button type="button" data-action="delete" data-id="${menu.id}" class="danger-btn">Delete</button>
@@ -163,6 +197,7 @@
   };
 
   const fillForm = (menu) => {
+    const parsedGeo = parseGeoMeta(menu.distance);
     fields.menuId.value = menu.id;
     fields.tier.value = menu.tier;
     fields.menuDate.value = menu.menu_date;
@@ -170,7 +205,9 @@
     fields.rating.value = menu.rating;
     fields.timings.value = menu.timings;
     fields.crowd.value = menu.crowd;
-    fields.distance.value = menu.distance;
+    fields.distance.value = parsedGeo.display;
+    fields.messCoords.value =
+      parsedGeo.lat !== null && parsedGeo.lng !== null ? `${parsedGeo.lat},${parsedGeo.lng}` : "";
     fields.menuItems.value = menu.menu_items.join("\n");
     fields.special.value = menu.special;
     fields.vegetarianOnly.checked = Boolean(menu.vegetarian_only);
@@ -188,7 +225,7 @@
     rating: Number(fields.rating.value || 0),
     timings: fields.timings.value.trim(),
     crowd: fields.crowd.value.trim(),
-    distance: fields.distance.value.trim(),
+    distance: withGeoMeta(fields.distance.value.trim(), fields.messCoords.value.trim()),
     menu_items: fields.menuItems.value
       .split("\n")
       .map((item) => item.trim())
@@ -203,6 +240,9 @@
     if (!payload.menu_items.length) return "Add at least one menu item.";
     if (payload.price <= 0) return "Price must be greater than 0.";
     if (payload.rating < 1 || payload.rating > 5) return "Rating must be between 1 and 5.";
+    if (fields.messCoords?.value.trim() && !parseCoordsInput(fields.messCoords.value.trim())) {
+      return "Coordinates must be in format: lat,lng";
+    }
     return "";
   };
 
