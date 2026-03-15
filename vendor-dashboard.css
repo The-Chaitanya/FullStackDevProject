@@ -202,6 +202,16 @@ textarea {
   background: #f7f1ed;
 }
 
+.vendor-location-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  font: inherit;
+}
+
+.vendor-location-map .leaflet-control-attribution {
+  font-size: 0.68rem;
+}
+
 .vendor-map-preview {
   width: 100%;
   height: 220px;

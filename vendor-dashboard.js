@@ -5,7 +5,7 @@
   const MESS_NAME_KEY_PREFIX = "messplans_vendor_mess_name_";
   const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
   const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
-  const GOOGLE_MAPS_API_KEY = "AIzaSyAYS4VMvr6TU7X2p5VuBYF3m2yzSKq1tPU";
+  const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org";
   const normalizeRole = (value) => (String(value || "").toLowerCase() === "vendor" ? "vendor" : "student");
 
   const form = document.getElementById("vendorMenuForm");
@@ -77,10 +77,18 @@
       const url = new URL(text);
       const directAt = url.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
       if (directAt) return parseCoordsInput(`${directAt[1]},${directAt[2]}`);
+      const hashMarker = url.hash.match(/map=\d+\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)/);
+      if (hashMarker) return parseCoordsInput(`${hashMarker[1]},${hashMarker[2]}`);
       const q = url.searchParams.get("q") || url.searchParams.get("query");
       const ll = url.searchParams.get("ll");
       const daddr = url.searchParams.get("daddr");
       const dest = url.searchParams.get("destination");
+      const mlat = url.searchParams.get("mlat");
+      const mlon = url.searchParams.get("mlon");
+      if (mlat && mlon) {
+        const parsed = parseCoordsInput(`${mlat},${mlon}`);
+        if (parsed) return parsed;
+      }
       const maybeCoords = q || ll || daddr || dest;
       if (maybeCoords) {
         const parsed = parseCoordsInput(maybeCoords);
@@ -95,30 +103,99 @@
   const geocodeAddress = async (rawAddress) => {
     const address = String(rawAddress || "").trim();
     if (!address) return null;
-    const url =
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}` +
-      `&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
-    const response = await fetch(url);
+    const response = await fetch(
+      `${NOMINATIM_ENDPOINT}/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`,
+      {
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
     if (!response.ok) {
-      throw new Error("Could not reach geocoding service.");
+      throw new Error("Address lookup is unavailable right now. Please try again.");
     }
-    const payload = await response.json();
-    if (payload.status !== "OK" || !Array.isArray(payload.results) || !payload.results.length) {
-      if (payload.status === "REQUEST_DENIED") {
-        throw new Error("Geocoding request denied. Check Google Cloud restrictions and billing.");
-      }
+    const results = await response.json();
+    if (!Array.isArray(results) || !results.length) {
       return null;
     }
-    const top = payload.results[0];
-    const location = top.geometry?.location;
-    if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
-      return null;
-    }
+    const top = results[0];
     return {
-      lat: Number(location.lat),
-      lng: Number(location.lng),
-      formattedAddress: String(top.formatted_address || address).trim(),
+      lat: Number(top.lat),
+      lng: Number(top.lon),
+      formattedAddress: String(top.display_name || address).trim(),
     };
+  };
+
+  const reverseGeocodeCoords = async (coords) => {
+    if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return "";
+    const response = await fetch(
+      `${NOMINATIM_ENDPOINT}/reverse?format=jsonv2&lat=${encodeURIComponent(coords.lat)}&lon=${encodeURIComponent(coords.lng)}`,
+      {
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+    if (!response.ok) {
+      return "";
+    }
+    const result = await response.json();
+    return String(result?.display_name || "").trim();
+  };
+
+  const ensureLeaflet = () => {
+    if (window.L && vendorLocationMap) return window.L;
+    throw new Error("Map library could not load.");
+  };
+
+  const formatMapBounds = (coords, delta = 0.008) => {
+    const minLng = coords.lng - delta;
+    const maxLng = coords.lng + delta;
+    const minLat = coords.lat - delta;
+    const maxLat = coords.lat + delta;
+    return `${minLng}%2C${minLat}%2C${maxLng}%2C${maxLat}`;
+  };
+
+  const openStreetMapLink = (coords) =>
+    `https://www.openstreetmap.org/?mlat=${encodeURIComponent(coords.lat)}&mlon=${encodeURIComponent(coords.lng)}#map=16/${encodeURIComponent(coords.lat)}/${encodeURIComponent(coords.lng)}`;
+
+  const updateMapPreview = (coords) => {
+    if (!vendorMapPreview) return;
+    if (!coords) {
+      vendorMapPreview.removeAttribute("src");
+      vendorMapPreview.hidden = true;
+      return;
+    }
+    vendorMapPreview.src =
+      `https://www.openstreetmap.org/export/embed.html?bbox=${formatMapBounds(coords)}` +
+      `&layer=mapnik&marker=${encodeURIComponent(`${coords.lat},${coords.lng}`)}`;
+    vendorMapPreview.hidden = false;
+  };
+
+  const initLocationMap = async () => {
+    if (locationMap || !vendorLocationMap) return locationMap;
+    const L = ensureLeaflet();
+    locationMap = L.map(vendorLocationMap, {
+      zoomControl: true,
+      scrollWheelZoom: true,
+    }).setView([18.5204, 73.8567], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(locationMap);
+
+    locationMap.on("click", (event) => {
+      const coords = {
+        lat: Number(event.latlng.lat),
+        lng: Number(event.latlng.lng),
+      };
+      pendingMapCoords = coords;
+      setMapMarker(coords);
+      setMapMessage(`Selected on map: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`, "success");
+    });
+    setTimeout(() => locationMap.invalidateSize(), 50);
+    return locationMap;
   };
 
   const withGeoMeta = (distance, coordsRaw) => {
@@ -141,7 +218,7 @@
       await initLocationMap();
       setMapMarker(coords);
     } catch {
-      setMapMessage("Google Maps could not load for the picker.", "error");
+      setMapMessage("Map picker could not load.", "error");
     }
     updateMapPreview(coords);
     if (persist && fields.messCoords.value.trim()) {
@@ -159,95 +236,23 @@
     if (type) mapMessage.classList.add(type);
   };
 
-  const updateMapPreview = (coords) => {
-    if (!vendorMapPreview) return;
-    if (!coords) {
-      vendorMapPreview.removeAttribute("src");
-      vendorMapPreview.hidden = true;
-      return;
-    }
-    const query = `${coords.lat},${coords.lng}`;
-    vendorMapPreview.src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=16&output=embed`;
-    vendorMapPreview.hidden = false;
-  };
-
-  const loadGoogleMaps = () => {
-    if (window.google?.maps) {
-      return Promise.resolve(window.google.maps);
-    }
-    if (googleMapsLoader) {
-      return googleMapsLoader;
-    }
-    googleMapsLoader = new Promise((resolve, reject) => {
-      const readyCallback = "__messbuddyGoogleMapsReady";
-      const existing = document.querySelector('script[data-google-maps-loader="1"]');
-      if (existing) {
-        existing.addEventListener("load", () => resolve(window.google.maps), { once: true });
-        existing.addEventListener("error", () => reject(new Error("Could not load Google Maps.")), { once: true });
-        return;
-      }
-      window[readyCallback] = () => {
-        if (window.google?.maps) {
-          resolve(window.google.maps);
-        } else {
-          reject(new Error("Google Maps loaded incorrectly."));
-        }
-      };
-      window.gm_authFailure = () => {
-        setMapMessage("Google Maps auth failed. Check billing, allowed website domains, and API restrictions.", "error");
-        reject(new Error("Google Maps auth failed."));
-      };
-      const script = document.createElement("script");
-      script.src =
-        `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}` +
-        `&libraries=places&callback=${readyCallback}`;
-      script.async = true;
-      script.defer = true;
-      script.dataset.googleMapsLoader = "1";
-      script.addEventListener("error", () => reject(new Error("Could not load Google Maps.")));
-      document.head.appendChild(script);
-    });
-    return googleMapsLoader;
-  };
-
-  const initLocationMap = async () => {
-    if (locationMap || !vendorLocationMap) return locationMap;
-    const maps = await loadGoogleMaps();
-    locationMap = new maps.Map(vendorLocationMap, {
-      center: { lat: 18.5204, lng: 73.8567 },
-      zoom: 13,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      gestureHandling: "greedy",
-    });
-
-    locationMap.addListener("click", (event) => {
-      const coords = {
-        lat: Number(event.latLng.lat()),
-        lng: Number(event.latLng.lng()),
-      };
-      pendingMapCoords = coords;
-      setMapMarker(coords);
-      setMapMessage(`Selected on map: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`, "success");
-    });
-
-    return locationMap;
-  };
-
   const setMapMarker = (coords) => {
     if (!locationMap || !coords) return;
+    const L = ensureLeaflet();
     if (!locationMarker) {
-      locationMarker = new window.google.maps.Marker({
-        position: coords,
-        map: locationMap,
-      });
+      locationMarker = L.marker([coords.lat, coords.lng]).addTo(locationMap);
     } else {
-      locationMarker.setPosition(coords);
+      locationMarker.setLatLng([coords.lat, coords.lng]);
     }
-    locationMap.setCenter(coords);
-    if ((locationMap.getZoom() || 0) < 15) {
-      locationMap.setZoom(15);
+    locationMap.setView([coords.lat, coords.lng], Math.max(locationMap.getZoom() || 13, 15));
+  };
+
+  const maybeFillAddressFromCoords = async (coords) => {
+    if (!fields.distance) return;
+    if (fields.distance.value.trim()) return;
+    const address = await reverseGeocodeCoords(coords);
+    if (address) {
+      fields.distance.value = address;
     }
   };
 
@@ -258,7 +263,6 @@
   let locationMap = null;
   let locationMarker = null;
   let pendingMapCoords = null;
-  let googleMapsLoader = null;
 
   const authClient =
     window.supabase && typeof window.supabase.createClient === "function"
@@ -429,7 +433,7 @@
     pendingMapCoords = coords;
     updateMapPreview(coords);
     initLocationMap().then(() => setMapMarker(coords)).catch(() => {
-      setMapMessage("Google Maps could not load for the picker.", "error");
+      setMapMessage("Map picker could not load.", "error");
     });
     fields.menuItems.value = menu.menu_items.join("\n");
     fields.special.value = menu.special;
@@ -449,10 +453,10 @@
         fields.messCoords.value = `${parsedFromLink.lat.toFixed(6)},${parsedFromLink.lng.toFixed(6)}`;
         pendingMapCoords = parsedFromLink;
         initLocationMap().then(() => setMapMarker(parsedFromLink)).catch(() => {
-          setMapMessage("Google Maps could not load for the picker.", "error");
+          setMapMessage("Map picker could not load.", "error");
         });
         updateMapPreview(parsedFromLink);
-        setMapMessage("Coordinates extracted from Google Maps link.", "success");
+        setMapMessage("Coordinates extracted from map link.", "success");
       }
     }
 
@@ -613,11 +617,12 @@
       try {
         await initLocationMap();
       } catch {
-        setMapMessage("Google Maps could not load. Check the API key and enabled APIs.", "error");
+        setMapMessage("Map picker could not load. Check your connection and retry.", "error");
         return;
       }
       vendorLocationMap?.scrollIntoView({ behavior: "smooth", block: "center" });
       if (pendingMapCoords) setMapMarker(pendingMapCoords);
+      setTimeout(() => locationMap?.invalidateSize(), 150);
     });
   }
 
@@ -658,10 +663,19 @@
         setMapMessage("Pick a point on map first.", "error");
         return;
       }
-      await applyResolvedLocation(pendingMapCoords, {
-        persist: true,
-        message: "Location set from map selection.",
-      });
+      try {
+        const inferredAddress = await reverseGeocodeCoords(pendingMapCoords);
+        await applyResolvedLocation(pendingMapCoords, {
+          formattedAddress: inferredAddress,
+          persist: true,
+          message: "Location set from map selection.",
+        });
+      } catch {
+        await applyResolvedLocation(pendingMapCoords, {
+          persist: true,
+          message: "Location set from map selection.",
+        });
+      }
     });
   }
 
@@ -679,10 +693,19 @@
             lat: Number(position.coords.latitude),
             lng: Number(position.coords.longitude),
           };
-          await applyResolvedLocation(coords, {
-            persist: true,
-            message: "Location set from current position.",
-          });
+          try {
+            const inferredAddress = await reverseGeocodeCoords(coords);
+            await applyResolvedLocation(coords, {
+              formattedAddress: inferredAddress,
+              persist: true,
+              message: "Location set from current position.",
+            });
+          } catch {
+            await applyResolvedLocation(coords, {
+              persist: true,
+              message: "Location set from current position.",
+            });
+          }
           useCurrentLocationBtn.disabled = false;
         },
         () => {
@@ -698,7 +721,7 @@
     const resolveFromLink = () => {
       const parsed = parseMapsUrlCoords(mapsLink.value);
       if (!parsed) {
-        if (mapsLink.value.trim()) setMapMessage("Could not read coordinates from this Google Maps link.", "error");
+        if (mapsLink.value.trim()) setMapMessage("Could not read coordinates from this map link.", "error");
         return;
       }
       fields.messCoords.value = `${parsed.lat.toFixed(6)},${parsed.lng.toFixed(6)}`;
@@ -710,10 +733,13 @@
           return persistCoords(fields.messCoords.value.trim());
         })
         .then(() => {
-          setMapMessage("Coordinates extracted from Google Maps link.", "success");
+          return maybeFillAddressFromCoords(parsed);
+        })
+        .then(() => {
+          setMapMessage("Coordinates extracted from map link.", "success");
         })
         .catch(() => {
-          setMapMessage("Google Maps could not load for the picker.", "error");
+          setMapMessage("Map picker could not load.", "error");
         });
     };
     mapsLink.addEventListener("change", resolveFromLink);
@@ -760,11 +786,12 @@
           setMapMarker(parsed);
           return persistCoords(fields.messCoords.value.trim());
         })
+        .then(() => maybeFillAddressFromCoords(parsed))
         .then(() => {
           setMapMessage("Coordinates set.", "success");
         })
         .catch(() => {
-          setMapMessage("Google Maps could not load for the picker.", "error");
+          setMapMessage("Map picker could not load.", "error");
         });
     });
   }
@@ -782,7 +809,7 @@
     try {
       await initLocationMap();
     } catch {
-      setMapMessage("Google Maps could not load. Check the API key and enabled APIs.", "error");
+      setMapMessage("Map picker could not load. Check your connection and retry.", "error");
     }
     if (fields.messCoords) fields.messCoords.value = lockedMessCoords;
     const startupCoords = parseCoordsInput(lockedMessCoords || "");
