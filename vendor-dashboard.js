@@ -5,6 +5,7 @@
   const MESS_NAME_KEY_PREFIX = "messplans_vendor_mess_name_";
   const SUPABASE_URL = "https://pdhqcqjyhkptoxlbkiif.supabase.co";
   const SUPABASE_KEY = "sb_publishable_1jt0-lflaREyfVHv2iLahw_Mm9gms5w";
+  const GOOGLE_MAPS_API_KEY = "AIzaSyAYS4VMvr6TU7X2p5VuBYF3m2yzSKq1tPU";
   const normalizeRole = (value) => (String(value || "").toLowerCase() === "vendor" ? "vendor" : "student");
 
   const form = document.getElementById("vendorMenuForm");
@@ -34,7 +35,6 @@
     tier: document.getElementById("tier"),
     menuDate: document.getElementById("menuDate"),
     price: document.getElementById("price"),
-    rating: document.getElementById("rating"),
     timings: document.getElementById("timings"),
     crowd: document.getElementById("crowd"),
     distance: document.getElementById("distance"),
@@ -117,33 +117,84 @@
     vendorMapPreview.hidden = false;
   };
 
-  const initLocationMap = () => {
-    if (locationMap || !vendorLocationMap || !window.L) return;
-    locationMap = window.L.map(vendorLocationMap, { zoomControl: true }).setView([18.5204, 73.8567], 13);
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(locationMap);
+  const loadGoogleMaps = () => {
+    if (window.google?.maps) {
+      return Promise.resolve(window.google.maps);
+    }
+    if (googleMapsLoader) {
+      return googleMapsLoader;
+    }
+    googleMapsLoader = new Promise((resolve, reject) => {
+      const readyCallback = "__messbuddyGoogleMapsReady";
+      const existing = document.querySelector('script[data-google-maps-loader="1"]');
+      if (existing) {
+        existing.addEventListener("load", () => resolve(window.google.maps), { once: true });
+        existing.addEventListener("error", () => reject(new Error("Could not load Google Maps.")), { once: true });
+        return;
+      }
+      window[readyCallback] = () => {
+        if (window.google?.maps) {
+          resolve(window.google.maps);
+        } else {
+          reject(new Error("Google Maps loaded incorrectly."));
+        }
+      };
+      window.gm_authFailure = () => {
+        setMapMessage("Google Maps auth failed. Check billing, allowed website domains, and API restrictions.", "error");
+        reject(new Error("Google Maps auth failed."));
+      };
+      const script = document.createElement("script");
+      script.src =
+        `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}` +
+        `&libraries=places&callback=${readyCallback}`;
+      script.async = true;
+      script.defer = true;
+      script.dataset.googleMapsLoader = "1";
+      script.addEventListener("error", () => reject(new Error("Could not load Google Maps.")));
+      document.head.appendChild(script);
+    });
+    return googleMapsLoader;
+  };
 
-    locationMap.on("click", (event) => {
+  const initLocationMap = async () => {
+    if (locationMap || !vendorLocationMap) return locationMap;
+    const maps = await loadGoogleMaps();
+    locationMap = new maps.Map(vendorLocationMap, {
+      center: { lat: 18.5204, lng: 73.8567 },
+      zoom: 13,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      gestureHandling: "greedy",
+    });
+
+    locationMap.addListener("click", (event) => {
       const coords = {
-        lat: Number(event.latlng.lat),
-        lng: Number(event.latlng.lng),
+        lat: Number(event.latLng.lat()),
+        lng: Number(event.latLng.lng()),
       };
       pendingMapCoords = coords;
       setMapMarker(coords);
       setMapMessage(`Selected on map: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`, "success");
     });
+
+    return locationMap;
   };
 
   const setMapMarker = (coords) => {
     if (!locationMap || !coords) return;
     if (!locationMarker) {
-      locationMarker = window.L.marker([coords.lat, coords.lng]).addTo(locationMap);
+      locationMarker = new window.google.maps.Marker({
+        position: coords,
+        map: locationMap,
+      });
     } else {
-      locationMarker.setLatLng([coords.lat, coords.lng]);
+      locationMarker.setPosition(coords);
     }
-    locationMap.setView([coords.lat, coords.lng], Math.max(locationMap.getZoom(), 15), { animate: true });
+    locationMap.setCenter(coords);
+    if ((locationMap.getZoom() || 0) < 15) {
+      locationMap.setZoom(15);
+    }
   };
 
   let currentUser = null;
@@ -153,6 +204,7 @@
   let locationMap = null;
   let locationMarker = null;
   let pendingMapCoords = null;
+  let googleMapsLoader = null;
 
   const authClient =
     window.supabase && typeof window.supabase.createClient === "function"
@@ -267,7 +319,6 @@
     form.reset();
     fields.menuId.value = "";
     fields.menuDate.value = api.toIsoDay(new Date());
-    fields.rating.value = "4.5";
     fields.tier.value = "UNLIMITED";
     if (fields.messCoords) fields.messCoords.value = lockedMessCoords || "";
     if (fields.mapsLink) fields.mapsLink.value = "";
@@ -293,7 +344,6 @@
         <span>${menu.tier}</span>
         <span>${menu.menu_date}</span>
         <span>${formatPrice(menu.price)}</span>
-        <span>Rating ${Number(menu.rating).toFixed(1)}</span>
       </div>
       <ul class="vendor-menu">
         ${menu.menu_items.map((item) => `<li>${item}</li>`).join("")}
@@ -315,7 +365,6 @@
     fields.tier.value = menu.tier;
     fields.menuDate.value = menu.menu_date;
     fields.price.value = menu.price;
-    fields.rating.value = menu.rating;
     fields.timings.value = menu.timings;
     fields.crowd.value = menu.crowd;
     fields.distance.value = parsedGeo.display;
@@ -325,7 +374,9 @@
     const coords = parsedGeo.lat !== null && parsedGeo.lng !== null ? { lat: parsedGeo.lat, lng: parsedGeo.lng } : null;
     pendingMapCoords = coords;
     updateMapPreview(coords);
-    setMapMarker(coords);
+    initLocationMap().then(() => setMapMarker(coords)).catch(() => {
+      setMapMessage("Google Maps could not load for the picker.", "error");
+    });
     fields.menuItems.value = menu.menu_items.join("\n");
     fields.special.value = menu.special;
     fields.vegetarianOnly.checked = Boolean(menu.vegetarian_only);
@@ -343,8 +394,9 @@
       if (parsedFromLink) {
         fields.messCoords.value = `${parsedFromLink.lat.toFixed(6)},${parsedFromLink.lng.toFixed(6)}`;
         pendingMapCoords = parsedFromLink;
-        initLocationMap();
-        setMapMarker(parsedFromLink);
+        initLocationMap().then(() => setMapMarker(parsedFromLink)).catch(() => {
+          setMapMessage("Google Maps could not load for the picker.", "error");
+        });
         updateMapPreview(parsedFromLink);
         setMapMessage("Coordinates extracted from Google Maps link.", "success");
       }
@@ -356,7 +408,6 @@
       tier: fields.tier.value,
       menu_date: fields.menuDate.value,
       price: Number(fields.price.value || 0),
-      rating: Number(fields.rating.value || 0),
       timings: fields.timings.value.trim(),
       crowd: fields.crowd.value.trim(),
       distance: withGeoMeta(fields.distance.value.trim(), fields.messCoords.value.trim()),
@@ -374,7 +425,6 @@
     if (!payload.menu_date) return "Menu date is required.";
     if (!payload.menu_items.length) return "Add at least one menu item.";
     if (payload.price <= 0) return "Price must be greater than 0.";
-    if (payload.rating < 1 || payload.rating > 5) return "Rating must be between 1 and 5.";
     if (fields.messCoords?.value.trim() && !parseCoordsInput(fields.messCoords.value.trim())) {
       return "Coordinates must be in format: lat,lng";
     }
@@ -505,23 +555,27 @@
   }
 
   if (openMapsBtn) {
-    openMapsBtn.addEventListener("click", () => {
-      initLocationMap();
-      window.requestAnimationFrame(() => locationMap?.invalidateSize());
+    openMapsBtn.addEventListener("click", async () => {
+      try {
+        await initLocationMap();
+      } catch {
+        setMapMessage("Google Maps could not load. Check the API key and enabled APIs.", "error");
+        return;
+      }
       vendorLocationMap?.scrollIntoView({ behavior: "smooth", block: "center" });
       if (pendingMapCoords) setMapMarker(pendingMapCoords);
     });
   }
 
   if (setMapLocationBtn) {
-    setMapLocationBtn.addEventListener("click", () => {
+    setMapLocationBtn.addEventListener("click", async () => {
       if (!pendingMapCoords) {
         setMapMessage("Pick a point on map first.", "error");
         return;
       }
       fields.messCoords.value = `${pendingMapCoords.lat.toFixed(6)},${pendingMapCoords.lng.toFixed(6)}`;
       updateMapPreview(pendingMapCoords);
-      persistCoords(fields.messCoords.value.trim());
+      await persistCoords(fields.messCoords.value.trim());
       setMapMessage("Location set from map selection.", "success");
     });
   }
@@ -535,17 +589,21 @@
       useCurrentLocationBtn.disabled = true;
       setMapMessage("Getting current location...");
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const coords = {
             lat: Number(position.coords.latitude),
             lng: Number(position.coords.longitude),
           };
           pendingMapCoords = coords;
           fields.messCoords.value = `${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}`;
-          initLocationMap();
-          setMapMarker(coords);
+          try {
+            await initLocationMap();
+            setMapMarker(coords);
+          } catch {
+            setMapMessage("Google Maps could not load for the picker.", "error");
+          }
           updateMapPreview(coords);
-          persistCoords(fields.messCoords.value.trim());
+          await persistCoords(fields.messCoords.value.trim());
           setMapMessage("Location set from current position.", "success");
           useCurrentLocationBtn.disabled = false;
         },
@@ -567,11 +625,18 @@
       }
       fields.messCoords.value = `${parsed.lat.toFixed(6)},${parsed.lng.toFixed(6)}`;
       pendingMapCoords = parsed;
-      initLocationMap();
-      setMapMarker(parsed);
       updateMapPreview(parsed);
-      persistCoords(fields.messCoords.value.trim());
-      setMapMessage("Coordinates extracted from Google Maps link.", "success");
+      initLocationMap()
+        .then(() => {
+          setMapMarker(parsed);
+          return persistCoords(fields.messCoords.value.trim());
+        })
+        .then(() => {
+          setMapMessage("Coordinates extracted from Google Maps link.", "success");
+        })
+        .catch(() => {
+          setMapMessage("Google Maps could not load for the picker.", "error");
+        });
     };
     mapsLink.addEventListener("change", resolveFromLink);
     mapsLink.addEventListener("blur", resolveFromLink);
@@ -590,11 +655,18 @@
         return;
       }
       pendingMapCoords = parsed;
-      initLocationMap();
-      setMapMarker(parsed);
       updateMapPreview(parsed);
-      persistCoords(fields.messCoords.value.trim());
-      setMapMessage("Coordinates set.", "success");
+      initLocationMap()
+        .then(() => {
+          setMapMarker(parsed);
+          return persistCoords(fields.messCoords.value.trim());
+        })
+        .then(() => {
+          setMapMessage("Coordinates set.", "success");
+        })
+        .catch(() => {
+          setMapMessage("Google Maps could not load for the picker.", "error");
+        });
     });
   }
 
@@ -608,7 +680,11 @@
         ? `${storedVendorLocation.latitude},${storedVendorLocation.longitude}`
         : String(currentUser?.user_metadata?.mess_coords || "").trim();
     fields.menuDate.value = api.toIsoDay(new Date());
-    initLocationMap();
+    try {
+      await initLocationMap();
+    } catch {
+      setMapMessage("Google Maps could not load. Check the API key and enabled APIs.", "error");
+    }
     if (fields.messCoords) fields.messCoords.value = lockedMessCoords;
     const startupCoords = parseCoordsInput(lockedMessCoords || "");
     pendingMapCoords = startupCoords;
