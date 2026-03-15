@@ -10,6 +10,11 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="https://unpkg.com/pattern.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -19,6 +24,8 @@
     <link rel="stylesheet" href="vendor-dashboard.css" />
   </head>
   <body>
+    <div class="page-pattern page-pattern-primary pattern-grid-lg" aria-hidden="true"></div>
+    <div class="page-pattern page-pattern-secondary pattern-diagonal-lines-sm" aria-hidden="true"></div>
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark">MP</span>
@@ -29,12 +36,39 @@
       </div>
       <div class="top-actions">
         <span id="storageMode" class="storage-pill">Storage: checking...</span>
-        <a href="profile.html?role=vendor" class="ghost-link">Profile</a>
-        <button id="logoutBtn" type="button" class="danger-btn">Logout</button>
+        <a href="profile.html?role=vendor" class="ghost-link"><i class="bi bi-person-circle" aria-hidden="true"></i><span>Profile</span></a>
+        <button id="logoutBtn" type="button" class="danger-btn"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></button>
       </div>
     </header>
 
     <main class="layout">
+      <section class="dashboard-hero panel">
+        <div class="hero-copy">
+          <p class="hero-eyebrow">Vendor Workspace</p>
+          <h2>Run your mess operations with clarity</h2>
+          <p class="hero-text">
+            Manage your daily menu, keep your location pinned, and reuse past cards faster for the next service window.
+          </p>
+        </div>
+        <div class="hero-stats">
+          <article class="hero-stat">
+            <i class="bi bi-journal-richtext hero-stat-icon" aria-hidden="true"></i>
+            <span class="hero-stat-label">Total cards</span>
+            <strong id="statTotalMenus">0</strong>
+          </article>
+          <article class="hero-stat">
+            <i class="bi bi-calendar2-week hero-stat-icon" aria-hidden="true"></i>
+            <span class="hero-stat-label">Latest date</span>
+            <strong id="statLatestDate">-</strong>
+          </article>
+          <article class="hero-stat">
+            <i class="bi bi-lightning-charge hero-stat-icon" aria-hidden="true"></i>
+            <span class="hero-stat-label">Preset-ready</span>
+            <strong id="statPresetCount">0</strong>
+          </article>
+        </div>
+      </section>
+
       <section class="panel form-panel">
         <h2 id="formTitle">Create Daily Menu Card</h2>
         <p class="muted">One card per mess per day (you can edit anytime).</p>
@@ -44,11 +78,26 @@
             <input id="messPropertyName" type="text" placeholder="e.g. Spice Hub Mess" />
           </label>
           <div class="form-actions">
-            <button id="saveMessNameBtn" type="button" class="primary-btn">Save Mess Name</button>
+            <button id="saveMessNameBtn" type="button" class="primary-btn"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Save Mess Name</span></button>
           </div>
           <p id="messSetupMessage" class="message" role="status" aria-live="polite"></p>
         </div>
         <p id="messIdentity" class="mess-identity"></p>
+        <div id="presetPanel" class="preset-panel" hidden>
+          <div class="preset-panel-head">
+            <h3><i class="bi bi-clock-history" aria-hidden="true"></i> Use Previous Menu</h3>
+            <p>Start from one of your earlier menu cards, then adjust anything for today.</p>
+          </div>
+          <div class="preset-actions">
+            <label>
+              Previous cards
+              <select id="presetMenuSelect">
+                <option value="">Choose a previous menu</option>
+              </select>
+            </label>
+            <button id="applyPresetBtn" type="button" class="ghost-btn"><i class="bi bi-magic" aria-hidden="true"></i><span>Use Preset</span></button>
+          </div>
+        </div>
         <form id="vendorMenuForm" novalidate>
           <input type="hidden" id="menuId" />
 
@@ -80,40 +129,56 @@
             <input id="timings" type="text" placeholder="12:00 PM - 3:00 PM" required />
           </label>
 
-          <div class="grid-2">
-            <label>
-              Crowd Level
-              <input id="crowd" type="text" placeholder="Low wait" required />
-            </label>
+          <label>
+            Crowd Level
+            <input id="crowd" type="text" placeholder="Low wait" required />
+          </label>
+
+          <section class="location-panel" aria-labelledby="locationInfoTitle">
+            <div class="location-panel-head">
+              <h3 id="locationInfoTitle"><i class="bi bi-geo-alt" aria-hidden="true"></i> Location Info</h3>
+              <p>Pick a valid address from suggestions, or set it directly from the map.</p>
+            </div>
+
             <label>
               Address
-              <input id="distance" type="text" placeholder="Hostel Block A, Campus Circle, Pune" required />
+              <div class="address-field-wrap">
+                <input
+                  id="distance"
+                  type="text"
+                  placeholder="Search hostel, college road, campus area..."
+                  autocomplete="off"
+                  required
+                />
+                <div id="addressSuggestions" class="address-suggestions" hidden></div>
+              </div>
             </label>
-          </div>
 
-          <label>
-            Coordinates
-            <input id="messCoords" type="text" placeholder="18.5204,73.8567" />
-          </label>
-          <div class="map-tools">
-            <button id="useCurrentLocationBtn" type="button" class="ghost-btn">Use Current Location</button>
-            <button id="openMapsBtn" type="button" class="ghost-btn">Open Map Picker</button>
-            <button id="findAddressBtn" type="button" class="ghost-btn">Find Address</button>
-            <button id="setMapLocationBtn" type="button" class="ghost-btn">Set Selected Location</button>
-          </div>
-          <div id="vendorLocationMap" class="vendor-location-map" aria-label="Location picker map"></div>
-          <label>
-            Map Link (optional)
-            <input id="mapsLink" type="url" placeholder="Paste Google Maps or OpenStreetMap link here" />
-          </label>
-          <p id="mapMessage" class="message" role="status" aria-live="polite"></p>
-          <iframe
-            id="vendorMapPreview"
-            class="vendor-map-preview"
-            title="Vendor location preview"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
+            <input id="messCoords" type="hidden" />
+
+            <div class="map-tools">
+              <button id="useCurrentLocationBtn" type="button" class="ghost-btn"><i class="bi bi-crosshair2" aria-hidden="true"></i><span>Use Current Location</span></button>
+              <button id="openMapsBtn" type="button" class="ghost-btn"><i class="bi bi-map" aria-hidden="true"></i><span>Open Map Picker</span></button>
+              <button id="setMapLocationBtn" type="button" class="ghost-btn"><i class="bi bi-pin-map" aria-hidden="true"></i><span>Set Selected Location</span></button>
+            </div>
+
+            <div id="vendorLocationMap" class="vendor-location-map" aria-label="Location picker map"></div>
+
+            <label>
+              Map Link (optional)
+              <input id="mapsLink" type="url" placeholder="Paste Google Maps or OpenStreetMap link here" />
+            </label>
+
+            <p id="mapMessage" class="message" role="status" aria-live="polite"></p>
+
+            <iframe
+              id="vendorMapPreview"
+              class="vendor-map-preview"
+              title="Vendor location preview"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </section>
 
           <label>
             Menu Items (one per line)
@@ -133,8 +198,8 @@
           <p id="formMessage" class="message" role="status" aria-live="polite"></p>
 
           <div class="form-actions">
-            <button id="submitBtn" type="submit" class="primary-btn">Save Menu Card</button>
-            <button id="resetBtn" type="button" class="ghost-btn">Clear</button>
+            <button id="submitBtn" type="submit" class="primary-btn"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span>Save Menu Card</span></button>
+            <button id="resetBtn" type="button" class="ghost-btn"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span>Clear</span></button>
           </div>
         </form>
       </section>
@@ -145,7 +210,7 @@
             <h2>Your Daily Cards</h2>
             <p class="muted">Edit or delete your published menus.</p>
           </div>
-          <button id="refreshBtn" type="button" class="ghost-btn">Refresh</button>
+          <button id="refreshBtn" type="button" class="ghost-btn"><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span>Refresh</span></button>
         </div>
         <div id="vendorCards" class="cards"></div>
       </section>

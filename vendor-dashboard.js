@@ -22,14 +22,20 @@
   const messSetupMessage = document.getElementById("messSetupMessage");
   const saveMessNameBtn = document.getElementById("saveMessNameBtn");
   const messIdentity = document.getElementById("messIdentity");
+  const presetPanel = document.getElementById("presetPanel");
+  const presetMenuSelect = document.getElementById("presetMenuSelect");
+  const applyPresetBtn = document.getElementById("applyPresetBtn");
   const mapMessage = document.getElementById("mapMessage");
+  const statTotalMenus = document.getElementById("statTotalMenus");
+  const statLatestDate = document.getElementById("statLatestDate");
+  const statPresetCount = document.getElementById("statPresetCount");
   const useCurrentLocationBtn = document.getElementById("useCurrentLocationBtn");
   const openMapsBtn = document.getElementById("openMapsBtn");
-  const findAddressBtn = document.getElementById("findAddressBtn");
   const setMapLocationBtn = document.getElementById("setMapLocationBtn");
   const vendorLocationMap = document.getElementById("vendorLocationMap");
   const vendorMapPreview = document.getElementById("vendorMapPreview");
   const mapsLink = document.getElementById("mapsLink");
+  const addressSuggestions = document.getElementById("addressSuggestions");
 
   const fields = {
     menuId: document.getElementById("menuId"),
@@ -100,11 +106,11 @@
     return null;
   };
 
-  const geocodeAddress = async (rawAddress) => {
+  const searchAddressSuggestions = async (rawAddress) => {
     const address = String(rawAddress || "").trim();
-    if (!address) return null;
+    if (address.length < 3) return [];
     const response = await fetch(
-      `${NOMINATIM_ENDPOINT}/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`,
+      `${NOMINATIM_ENDPOINT}/search?format=jsonv2&limit=5&addressdetails=1&q=${encodeURIComponent(address)}`,
       {
         headers: {
           Accept: "application/json",
@@ -112,18 +118,17 @@
       },
     );
     if (!response.ok) {
-      throw new Error("Address lookup is unavailable right now. Please try again.");
+      throw new Error("Address suggestions are unavailable right now. Please try again.");
     }
     const results = await response.json();
-    if (!Array.isArray(results) || !results.length) {
-      return null;
-    }
-    const top = results[0];
-    return {
-      lat: Number(top.lat),
-      lng: Number(top.lon),
-      formattedAddress: String(top.display_name || address).trim(),
-    };
+    if (!Array.isArray(results)) return [];
+    return results
+      .map((item) => ({
+        lat: Number(item.lat),
+        lng: Number(item.lon),
+        formattedAddress: String(item.display_name || "").trim(),
+      }))
+      .filter((item) => item.formattedAddress && Number.isFinite(item.lat) && Number.isFinite(item.lng));
   };
 
   const reverseGeocodeCoords = async (coords) => {
@@ -159,6 +164,191 @@
   const openStreetMapLink = (coords) =>
     `https://www.openstreetmap.org/?mlat=${encodeURIComponent(coords.lat)}&mlon=${encodeURIComponent(coords.lng)}#map=16/${encodeURIComponent(coords.lat)}/${encodeURIComponent(coords.lng)}`;
 
+  const initHoverBorders = () => {
+    const targets = Array.from(document.querySelectorAll("button, .ghost-link"));
+    let lastPointer = null;
+    let prevPointer = null;
+    document.addEventListener("pointermove", (event) => {
+      prevPointer = lastPointer;
+      lastPointer = { x: event.clientX, y: event.clientY };
+    });
+
+    const tweenNumber = ({ from, to, duration, onUpdate, onComplete }) => {
+      if (!duration) {
+        onUpdate(to);
+        onComplete?.();
+        return null;
+      }
+      const start = performance.now();
+      let frame = 0;
+      const tick = (now) => {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = progress < 1 ? 1 - Math.pow(1 - progress, 3) : 1;
+        onUpdate(from + (to - from) * eased);
+        if (progress < 1) {
+          frame = requestAnimationFrame(tick);
+        } else {
+          onComplete?.();
+        }
+      };
+      frame = requestAnimationFrame(tick);
+      return {
+        stop() {
+          cancelAnimationFrame(frame);
+        },
+      };
+    };
+
+    const ensureHoverBorder = (el) => {
+      if (el.classList.contains("hover-border-target")) return;
+      el.classList.add("hover-border-target");
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.classList.add("hover-border");
+      svg.setAttribute("aria-hidden", "true");
+      svg.setAttribute("focusable", "false");
+
+      const pathForward = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      pathForward.classList.add("forward");
+      const pathBackward = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      pathBackward.classList.add("backward");
+      svg.appendChild(pathForward);
+      svg.appendChild(pathBackward);
+      el.appendChild(svg);
+
+      let metrics = null;
+      let totalLength = 0;
+      let lastInside = null;
+      let drawAnimation = null;
+
+      const getCurrentDraw = () => parseFloat(window.getComputedStyle(el).getPropertyValue("--draw")) || 0;
+      const getTargetDraw = () => {
+        const styles = window.getComputedStyle(el);
+        const overlap = parseFloat(styles.getPropertyValue("--hover-draw-overlap")) || 0;
+        return Math.min(totalLength / 2 + overlap, totalLength || overlap);
+      };
+
+      const animateDraw = (to, duration = 520) => {
+        drawAnimation?.stop?.();
+        const from = getCurrentDraw();
+        drawAnimation = tweenNumber({
+          from,
+          to,
+          duration,
+          onUpdate: (value) => el.style.setProperty("--draw", `${value}px`),
+          onComplete: () => {
+            drawAnimation = null;
+          },
+        });
+      };
+
+      const updateGeometry = () => {
+        const bounds = el.getBoundingClientRect();
+        const styles = window.getComputedStyle(el);
+        const stroke = parseFloat(styles.getPropertyValue("--hover-stroke")) || 2;
+        const gap = parseFloat(styles.getPropertyValue("--hover-gap")) || 0;
+        const inset = stroke / 2 + gap;
+        const x0 = inset;
+        const y0 = inset;
+        const x1 = Math.max(bounds.width - inset, inset + 1);
+        const y1 = Math.max(bounds.height - inset, inset + 1);
+        const width = Math.max(x1 - x0, 1);
+        const height = Math.max(y1 - y0, 1);
+        const baseRadius = parseFloat(styles.borderRadius) || 0;
+        const radius = Math.min(baseRadius, width / 2, height / 2);
+
+        svg.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
+        const d = [
+          `M ${x0 + radius} ${y0}`,
+          `H ${x1 - radius}`,
+          `A ${radius} ${radius} 0 0 1 ${x1} ${y0 + radius}`,
+          `V ${y1 - radius}`,
+          `A ${radius} ${radius} 0 0 1 ${x1 - radius} ${y1}`,
+          `H ${x0 + radius}`,
+          `A ${radius} ${radius} 0 0 1 ${x0} ${y1 - radius}`,
+          `V ${y0 + radius}`,
+          `A ${radius} ${radius} 0 0 1 ${x0 + radius} ${y0}`,
+          "Z",
+        ].join(" ");
+        pathForward.setAttribute("d", d);
+        pathBackward.setAttribute("d", d);
+
+        try {
+          totalLength = pathForward.getTotalLength();
+        } catch {
+          totalLength = 2 * (width + height);
+        }
+        el.style.setProperty("--perimeter", `${Math.max(totalLength, 1)}px`);
+        metrics = { bounds };
+      };
+
+      const findClosestLength = (x, y) => {
+        if (!totalLength || typeof pathForward.getPointAtLength !== "function") {
+          return 0;
+        }
+        const samples = 160;
+        let bestLen = 0;
+        let bestDist = Number.POSITIVE_INFINITY;
+        for (let i = 0; i <= samples; i += 1) {
+          const len = (i / samples) * totalLength;
+          const pt = pathForward.getPointAtLength(len);
+          const dx = pt.x - x;
+          const dy = pt.y - y;
+          const dist = dx * dx + dy * dy;
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestLen = len;
+          }
+        }
+        return bestLen;
+      };
+
+      const setStartFromPoint = (clientX, clientY) => {
+        if (!metrics) return;
+        const localX = clientX - metrics.bounds.left;
+        const localY = clientY - metrics.bounds.top;
+        const length = findClosestLength(localX, localY);
+        el.style.setProperty("--start", `${Math.max(length, 0)}px`);
+      };
+
+      updateGeometry();
+      el.style.setProperty("--draw", "0px");
+
+      el.addEventListener("pointerenter", (event) => {
+        updateGeometry();
+        const ref = prevPointer || lastPointer || { x: event.clientX, y: event.clientY };
+        setStartFromPoint(ref.x, ref.y);
+        lastInside = { x: event.clientX, y: event.clientY };
+        el.classList.add("hover-border-active");
+        animateDraw(getTargetDraw(), 520);
+      });
+
+      el.addEventListener("pointermove", (event) => {
+        lastInside = { x: event.clientX, y: event.clientY };
+      });
+
+      el.addEventListener("pointerleave", (event) => {
+        const ref = lastInside || prevPointer || lastPointer || { x: event.clientX, y: event.clientY };
+        setStartFromPoint(ref.x, ref.y);
+        lastInside = null;
+        animateDraw(0, 420);
+        window.setTimeout(() => {
+          if ((parseFloat(window.getComputedStyle(el).getPropertyValue("--draw")) || 0) <= 0.5) {
+            el.classList.remove("hover-border-active");
+          }
+        }, 430);
+      });
+
+      window.addEventListener("resize", updateGeometry);
+      if ("ResizeObserver" in window) {
+        const observer = new ResizeObserver(updateGeometry);
+        observer.observe(el);
+      }
+    };
+
+    targets.forEach(ensureHoverBorder);
+  };
+
   const updateMapPreview = (coords) => {
     if (!vendorMapPreview) return;
     if (!coords) {
@@ -192,7 +382,7 @@
       };
       pendingMapCoords = coords;
       setMapMarker(coords);
-      setMapMessage(`Selected on map: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`, "success");
+      setMapMessage("");
     });
     setTimeout(() => locationMap.invalidateSize(), 50);
     return locationMap;
@@ -210,6 +400,7 @@
     pendingMapCoords = coords;
     if (formattedAddress && fields.distance) {
       fields.distance.value = formattedAddress;
+      lastResolvedAddress = formattedAddress;
     }
     if (fields.messCoords) {
       fields.messCoords.value = `${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}`;
@@ -234,6 +425,57 @@
     mapMessage.textContent = text;
     mapMessage.className = "message";
     if (type) mapMessage.classList.add(type);
+    if (text && type === "error") {
+      mapMessage.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
+  const clearAddressSuggestions = () => {
+    if (!addressSuggestions) return;
+    addressSuggestions.innerHTML = "";
+    addressSuggestions.hidden = true;
+  };
+
+  const renderAddressSuggestions = (items) => {
+    if (!addressSuggestions) return;
+    addressSuggestions.innerHTML = "";
+    if (!Array.isArray(items) || !items.length) {
+      addressSuggestions.hidden = true;
+      return;
+    }
+    const fragment = document.createDocumentFragment();
+    items.forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "address-suggestion-item";
+      button.textContent = item.formattedAddress;
+      button.addEventListener("mousedown", () => {
+        selectingSuggestion = true;
+      });
+      button.addEventListener("click", async () => {
+        lastResolvedAddress = item.formattedAddress;
+        clearAddressSuggestions();
+        await applyResolvedLocation(
+          { lat: item.lat, lng: item.lng },
+          {
+            formattedAddress: item.formattedAddress,
+            persist: true,
+            message: "Address selected and location updated.",
+          },
+        );
+        window.setTimeout(() => {
+          selectingSuggestion = false;
+        }, 0);
+      });
+      fragment.appendChild(button);
+    });
+    addressSuggestions.appendChild(fragment);
+    addressSuggestions.hidden = false;
+  };
+
+  const handleNoAddressMatch = () => {
+    clearAddressSuggestions();
+    setMapMessage("Address not found. Drop a pin with Map Picker to set your mess location.", "error");
   };
 
   const setMapMarker = (coords) => {
@@ -253,6 +495,7 @@
     const address = await reverseGeocodeCoords(coords);
     if (address) {
       fields.distance.value = address;
+      lastResolvedAddress = address;
     }
   };
 
@@ -263,6 +506,10 @@
   let locationMap = null;
   let locationMarker = null;
   let pendingMapCoords = null;
+  let addressSuggestTimer = null;
+  let addressSuggestRequestId = 0;
+  let lastResolvedAddress = "";
+  let selectingSuggestion = false;
 
   const authClient =
     window.supabase && typeof window.supabase.createClient === "function"
@@ -373,6 +620,45 @@
     submitBtn.disabled = !isLocked;
   };
 
+  const formatPresetLabel = (menu) => {
+    const dishPreview = Array.isArray(menu.menu_items) && menu.menu_items.length ? menu.menu_items.slice(0, 2).join(", ") : "Menu";
+    return `${menu.menu_date} - ${menu.tier} - ${dishPreview}`;
+  };
+
+  const renderPresetOptions = () => {
+    if (!presetPanel || !presetMenuSelect) return;
+    const rows = Array.isArray(vendorMenusAll) ? [...vendorMenusAll] : [];
+    const usableRows = rows
+      .filter((menu) => menu && menu.id)
+      .sort((a, b) => String(b.menu_date).localeCompare(String(a.menu_date)));
+
+    presetMenuSelect.innerHTML = '<option value="">Choose a previous menu</option>';
+    usableRows.forEach((menu) => {
+      const option = document.createElement("option");
+      option.value = menu.id;
+      option.textContent = formatPresetLabel(menu);
+      presetMenuSelect.appendChild(option);
+    });
+    presetPanel.hidden = usableRows.length === 0;
+  };
+
+  const renderDashboardStats = () => {
+    const rows = Array.isArray(vendorMenusAll) ? vendorMenusAll : [];
+    if (statTotalMenus) {
+      statTotalMenus.textContent = String(rows.length);
+    }
+    if (statLatestDate) {
+      const latest = rows
+        .map((menu) => String(menu.menu_date || "").trim())
+        .filter(Boolean)
+        .sort((a, b) => b.localeCompare(a))[0];
+      statLatestDate.textContent = latest || "-";
+    }
+    if (statPresetCount) {
+      statPresetCount.textContent = String(rows.filter((menu) => menu && menu.id).length);
+    }
+  };
+
   const resetForm = () => {
     form.reset();
     fields.menuId.value = "";
@@ -380,6 +666,8 @@
     fields.tier.value = "UNLIMITED";
     if (fields.messCoords) fields.messCoords.value = lockedMessCoords || "";
     if (fields.mapsLink) fields.mapsLink.value = "";
+    clearAddressSuggestions();
+    lastResolvedAddress = "";
     const parsed = parseCoordsInput(lockedMessCoords || "");
     pendingMapCoords = parsed;
     updateMapPreview(parsed);
@@ -417,18 +705,22 @@
     return card;
   };
 
-  const fillForm = (menu) => {
+  const fillForm = (menu, options = {}) => {
+    const { mode = "edit" } = options;
     const parsedGeo = parseGeoMeta(menu.distance);
-    fields.menuId.value = menu.id;
+    const activeDate = fields.menuDate.value || api.toIsoDay(new Date());
+    fields.menuId.value = mode === "edit" ? menu.id : "";
     fields.tier.value = menu.tier;
-    fields.menuDate.value = menu.menu_date;
+    fields.menuDate.value = mode === "edit" ? menu.menu_date : activeDate;
     fields.price.value = menu.price;
     fields.timings.value = menu.timings;
     fields.crowd.value = menu.crowd;
     fields.distance.value = parsedGeo.display;
+    lastResolvedAddress = parsedGeo.display;
     fields.messCoords.value =
       parsedGeo.lat !== null && parsedGeo.lng !== null ? `${parsedGeo.lat},${parsedGeo.lng}` : lockedMessCoords;
     if (fields.mapsLink) fields.mapsLink.value = "";
+    clearAddressSuggestions();
     const coords = parsedGeo.lat !== null && parsedGeo.lng !== null ? { lat: parsedGeo.lat, lng: parsedGeo.lng } : null;
     pendingMapCoords = coords;
     updateMapPreview(coords);
@@ -438,8 +730,8 @@
     fields.menuItems.value = menu.menu_items.join("\n");
     fields.special.value = menu.special;
     fields.vegetarianOnly.checked = Boolean(menu.vegetarian_only);
-    formTitle.textContent = "Edit Daily Menu Card";
-    submitBtn.textContent = "Update Menu Card";
+    formTitle.textContent = mode === "edit" ? "Edit Daily Menu Card" : "Create Daily Menu Card";
+    submitBtn.textContent = mode === "edit" ? "Update Menu Card" : "Save Menu Card";
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -483,6 +775,12 @@
     if (!payload.menu_date) return "Menu date is required.";
     if (!payload.menu_items.length) return "Add at least one menu item.";
     if (payload.price <= 0) return "Price must be greater than 0.";
+    if (!payload.distance || !fields.messCoords?.value.trim()) {
+      return "Select a valid address from suggestions, map, or current location.";
+    }
+    if (fields.distance.value.trim() !== lastResolvedAddress.trim()) {
+      return "Please choose an address from the suggestions first.";
+    }
     if (fields.messCoords?.value.trim() && !parseCoordsInput(fields.messCoords.value.trim())) {
       return "Coordinates must be in format: lat,lng";
     }
@@ -501,6 +799,8 @@
       persistMessName(lockedMessName);
     }
     setMessLock();
+    renderPresetOptions();
+    renderDashboardStats();
   };
 
   const loadCards = async () => {
@@ -572,7 +872,7 @@
       const { rows } = await api.listVendorMenus({ ownerId: currentUser?.id, date: fields.menuDate.value });
       const row = rows.find((item) => item.id === id);
       if (!row) return;
-      fillForm(row);
+      fillForm(row, { mode: "edit" });
       setMessage("Editing selected card.");
     }
   });
@@ -583,6 +883,23 @@
 
   if (resetBtn) {
     resetBtn.addEventListener("click", resetForm);
+  }
+
+  if (applyPresetBtn) {
+    applyPresetBtn.addEventListener("click", () => {
+      const selectedId = String(presetMenuSelect?.value || "").trim();
+      if (!selectedId) {
+        setMessage("Choose a previous menu first.", "error");
+        return;
+      }
+      const selectedMenu = vendorMenusAll.find((menu) => menu.id === selectedId);
+      if (!selectedMenu) {
+        setMessage("That preset is no longer available. Refresh and try again.", "error");
+        return;
+      }
+      fillForm(selectedMenu, { mode: "preset" });
+      setMessage("Preset loaded. Review the menu and save it for the selected date.", "success");
+    });
   }
 
   if (logoutBtn) {
@@ -626,37 +943,6 @@
     });
   }
 
-  if (findAddressBtn) {
-    findAddressBtn.addEventListener("click", async () => {
-      const address = fields.distance?.value || "";
-      if (!String(address).trim()) {
-        setMapMessage("Enter an address first.", "error");
-        return;
-      }
-      findAddressBtn.disabled = true;
-      setMapMessage("Finding address on map...");
-      try {
-        const resolved = await geocodeAddress(address);
-        if (!resolved) {
-          setMapMessage("Could not find that address. Try a more complete address.", "error");
-          return;
-        }
-        await applyResolvedLocation(
-          { lat: resolved.lat, lng: resolved.lng },
-          {
-            formattedAddress: resolved.formattedAddress,
-            persist: true,
-            message: "Address found and coordinates updated.",
-          },
-        );
-      } catch (error) {
-        setMapMessage(error.message || "Could not find that address.", "error");
-      } finally {
-        findAddressBtn.disabled = false;
-      }
-    });
-  }
-
   if (setMapLocationBtn) {
     setMapLocationBtn.addEventListener("click", async () => {
       if (!pendingMapCoords) {
@@ -670,6 +956,7 @@
           persist: true,
           message: "Location set from map selection.",
         });
+        clearAddressSuggestions();
       } catch {
         await applyResolvedLocation(pendingMapCoords, {
           persist: true,
@@ -700,6 +987,7 @@
               persist: true,
               message: "Location set from current position.",
             });
+            clearAddressSuggestions();
           } catch {
             await applyResolvedLocation(coords, {
               persist: true,
@@ -736,6 +1024,8 @@
           return maybeFillAddressFromCoords(parsed);
         })
         .then(() => {
+          lastResolvedAddress = fields.distance.value.trim();
+          clearAddressSuggestions();
           setMapMessage("Coordinates extracted from map link.", "success");
         })
         .catch(() => {
@@ -747,23 +1037,43 @@
   }
 
   if (fields.distance) {
-    fields.distance.addEventListener("blur", async () => {
-      const address = fields.distance.value.trim();
-      if (!address || fields.messCoords.value.trim()) return;
-      try {
-        const resolved = await geocodeAddress(address);
-        if (!resolved) return;
-        await applyResolvedLocation(
-          { lat: resolved.lat, lng: resolved.lng },
-          {
-            formattedAddress: resolved.formattedAddress,
-            persist: true,
-            message: "Address matched and coordinates filled.",
-          },
-        );
-      } catch {
-        // Keep blur geocoding quiet to avoid noisy UX.
+    fields.distance.addEventListener("input", () => {
+      const query = fields.distance.value.trim();
+      if (query !== lastResolvedAddress) {
+        fields.messCoords.value = "";
       }
+      if (addressSuggestTimer) {
+        window.clearTimeout(addressSuggestTimer);
+      }
+      if (query.length < 3) {
+        clearAddressSuggestions();
+        return;
+      }
+      const requestId = ++addressSuggestRequestId;
+      addressSuggestTimer = window.setTimeout(async () => {
+        try {
+          const items = await searchAddressSuggestions(query);
+          if (requestId !== addressSuggestRequestId) return;
+          if (!items.length) {
+            handleNoAddressMatch();
+            return;
+          }
+          renderAddressSuggestions(items);
+        } catch {
+          if (requestId !== addressSuggestRequestId) return;
+          clearAddressSuggestions();
+        }
+      }, 260);
+    });
+
+    fields.distance.addEventListener("blur", () => {
+      if (selectingSuggestion) return;
+      window.setTimeout(() => {
+        clearAddressSuggestions();
+      }, 180);
+      const address = fields.distance.value.trim();
+      if (!address || fields.messCoords.value.trim() || address === lastResolvedAddress) return;
+      handleNoAddressMatch();
     });
   }
 
@@ -788,6 +1098,8 @@
         })
         .then(() => maybeFillAddressFromCoords(parsed))
         .then(() => {
+          lastResolvedAddress = fields.distance.value.trim();
+          clearAddressSuggestions();
           setMapMessage("Coordinates set.", "success");
         })
         .catch(() => {
@@ -796,9 +1108,22 @@
     });
   }
 
+  document.addEventListener("click", (event) => {
+    if (!addressSuggestions || !fields.distance) return;
+    const target = event.target;
+    if (
+      target === fields.distance ||
+      addressSuggestions.contains(target)
+    ) {
+      return;
+    }
+    clearAddressSuggestions();
+  });
+
   const init = async () => {
     const allowed = await ensureVendorRole();
     if (!allowed) return;
+    initHoverBorders();
     currentUser = await api.getCurrentUser();
     const storedVendorLocation = currentUser?.id ? await api.getUserLocation(currentUser.id, "vendor") : null;
     lockedMessCoords =
@@ -814,6 +1139,7 @@
     if (fields.messCoords) fields.messCoords.value = lockedMessCoords;
     const startupCoords = parseCoordsInput(lockedMessCoords || "");
     pendingMapCoords = startupCoords;
+    lastResolvedAddress = fields.distance?.value.trim() || "";
     updateMapPreview(startupCoords);
     setMapMarker(startupCoords);
     await refreshVendorMenusAll();
