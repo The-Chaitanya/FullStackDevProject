@@ -25,6 +25,7 @@
   const mapMessage = document.getElementById("mapMessage");
   const useCurrentLocationBtn = document.getElementById("useCurrentLocationBtn");
   const openMapsBtn = document.getElementById("openMapsBtn");
+  const findAddressBtn = document.getElementById("findAddressBtn");
   const setMapLocationBtn = document.getElementById("setMapLocationBtn");
   const vendorLocationMap = document.getElementById("vendorLocationMap");
   const vendorMapPreview = document.getElementById("vendorMapPreview");
@@ -91,11 +92,64 @@
     return null;
   };
 
+  const geocodeAddress = async (rawAddress) => {
+    const address = String(rawAddress || "").trim();
+    if (!address) return null;
+    const url =
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}` +
+      `&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("Could not reach geocoding service.");
+    }
+    const payload = await response.json();
+    if (payload.status !== "OK" || !Array.isArray(payload.results) || !payload.results.length) {
+      if (payload.status === "REQUEST_DENIED") {
+        throw new Error("Geocoding request denied. Check Google Cloud restrictions and billing.");
+      }
+      return null;
+    }
+    const top = payload.results[0];
+    const location = top.geometry?.location;
+    if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
+      return null;
+    }
+    return {
+      lat: Number(location.lat),
+      lng: Number(location.lng),
+      formattedAddress: String(top.formatted_address || address).trim(),
+    };
+  };
+
   const withGeoMeta = (distance, coordsRaw) => {
     const cleanDistance = String(distance || "").trim();
     const coords = parseCoordsInput(coordsRaw);
     if (!coords) return cleanDistance;
     return `${cleanDistance} [geo:${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}]`;
+  };
+
+  const applyResolvedLocation = async (coords, options = {}) => {
+    const { formattedAddress = "", persist = false, message = "" } = options;
+    pendingMapCoords = coords;
+    if (formattedAddress && fields.distance) {
+      fields.distance.value = formattedAddress;
+    }
+    if (fields.messCoords) {
+      fields.messCoords.value = `${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}`;
+    }
+    try {
+      await initLocationMap();
+      setMapMarker(coords);
+    } catch {
+      setMapMessage("Google Maps could not load for the picker.", "error");
+    }
+    updateMapPreview(coords);
+    if (persist && fields.messCoords.value.trim()) {
+      await persistCoords(fields.messCoords.value.trim());
+    }
+    if (message) {
+      setMapMessage(message, "success");
+    }
   };
 
   const setMapMessage = (text, type = "") => {
@@ -350,7 +404,7 @@
       </ul>
       <p class="row"><strong>Special:</strong> ${menu.special}</p>
       <p class="row"><strong>Timings:</strong> ${menu.timings}</p>
-      <p class="row"><strong>Crowd:</strong> ${menu.crowd} | <strong>Distance:</strong> ${parsedGeo.display}</p>
+      <p class="row"><strong>Crowd:</strong> ${menu.crowd} | <strong>Address:</strong> ${parsedGeo.display}</p>
       <div class="card-actions">
         <button type="button" data-action="edit" data-id="${menu.id}" class="ghost-btn">Edit</button>
         <button type="button" data-action="delete" data-id="${menu.id}" class="danger-btn">Delete</button>
@@ -567,16 +621,47 @@
     });
   }
 
+  if (findAddressBtn) {
+    findAddressBtn.addEventListener("click", async () => {
+      const address = fields.distance?.value || "";
+      if (!String(address).trim()) {
+        setMapMessage("Enter an address first.", "error");
+        return;
+      }
+      findAddressBtn.disabled = true;
+      setMapMessage("Finding address on map...");
+      try {
+        const resolved = await geocodeAddress(address);
+        if (!resolved) {
+          setMapMessage("Could not find that address. Try a more complete address.", "error");
+          return;
+        }
+        await applyResolvedLocation(
+          { lat: resolved.lat, lng: resolved.lng },
+          {
+            formattedAddress: resolved.formattedAddress,
+            persist: true,
+            message: "Address found and coordinates updated.",
+          },
+        );
+      } catch (error) {
+        setMapMessage(error.message || "Could not find that address.", "error");
+      } finally {
+        findAddressBtn.disabled = false;
+      }
+    });
+  }
+
   if (setMapLocationBtn) {
     setMapLocationBtn.addEventListener("click", async () => {
       if (!pendingMapCoords) {
         setMapMessage("Pick a point on map first.", "error");
         return;
       }
-      fields.messCoords.value = `${pendingMapCoords.lat.toFixed(6)},${pendingMapCoords.lng.toFixed(6)}`;
-      updateMapPreview(pendingMapCoords);
-      await persistCoords(fields.messCoords.value.trim());
-      setMapMessage("Location set from map selection.", "success");
+      await applyResolvedLocation(pendingMapCoords, {
+        persist: true,
+        message: "Location set from map selection.",
+      });
     });
   }
 
@@ -594,17 +679,10 @@
             lat: Number(position.coords.latitude),
             lng: Number(position.coords.longitude),
           };
-          pendingMapCoords = coords;
-          fields.messCoords.value = `${coords.lat.toFixed(6)},${coords.lng.toFixed(6)}`;
-          try {
-            await initLocationMap();
-            setMapMarker(coords);
-          } catch {
-            setMapMessage("Google Maps could not load for the picker.", "error");
-          }
-          updateMapPreview(coords);
-          await persistCoords(fields.messCoords.value.trim());
-          setMapMessage("Location set from current position.", "success");
+          await applyResolvedLocation(coords, {
+            persist: true,
+            message: "Location set from current position.",
+          });
           useCurrentLocationBtn.disabled = false;
         },
         () => {
@@ -640,6 +718,27 @@
     };
     mapsLink.addEventListener("change", resolveFromLink);
     mapsLink.addEventListener("blur", resolveFromLink);
+  }
+
+  if (fields.distance) {
+    fields.distance.addEventListener("blur", async () => {
+      const address = fields.distance.value.trim();
+      if (!address || fields.messCoords.value.trim()) return;
+      try {
+        const resolved = await geocodeAddress(address);
+        if (!resolved) return;
+        await applyResolvedLocation(
+          { lat: resolved.lat, lng: resolved.lng },
+          {
+            formattedAddress: resolved.formattedAddress,
+            persist: true,
+            message: "Address matched and coordinates filled.",
+          },
+        );
+      } catch {
+        // Keep blur geocoding quiet to avoid noisy UX.
+      }
+    });
   }
 
   if (fields.messCoords) {

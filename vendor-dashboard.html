@@ -80,18 +80,19 @@
               <input id="crowd" type="text" placeholder="Low wait" required />
             </label>
             <label>
-              Distance
-              <input id="distance" type="text" placeholder="5 min walk to Hostel Block A" required />
+              Address
+              <input id="distance" type="text" placeholder="Hostel Block A, Campus Circle, Pune" required />
             </label>
           </div>
 
           <label>
-            Mess Coordinates (optional, for exact student distance)
+            Coordinates
             <input id="messCoords" type="text" placeholder="18.5204,73.8567" />
           </label>
           <div class="map-tools">
             <button id="useCurrentLocationBtn" type="button" class="ghost-btn">Use Current Location</button>
             <button id="openMapsBtn" type="button" class="ghost-btn">Open Map Picker</button>
+            <button id="findAddressBtn" type="button" class="ghost-btn">Find Address</button>
             <button id="setMapLocationBtn" type="button" class="ghost-btn">Set Selected Location</button>
           </div>
           <div id="vendorLocationMap" class="vendor-location-map" aria-label="Location picker map"></div>

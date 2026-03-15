@@ -127,13 +127,19 @@
     return earthRadiusKm * c;
   };
 
-  const resolveDistanceLabel = (menu) => {
+  const resolveLocationInfo = (menu) => {
     const parsed = parseGeoMeta(menu.distance);
     if (userCoords && parsed.lat !== null && parsed.lng !== null) {
       const km = haversineKm(userCoords, { lat: parsed.lat, lng: parsed.lng });
-      return `${km.toFixed(2)} km from you`;
+      return {
+        address: parsed.display || "Near campus",
+        distanceText: `${km.toFixed(2)} km from you`,
+      };
     }
-    return parsed.display || "Near campus";
+    return {
+      address: parsed.display || "Near campus",
+      distanceText: "",
+    };
   };
 
   const buildGoogleMapUrls = (menu) => {
@@ -174,11 +180,12 @@
     const ratingCountText = ratingCount ? ` (${ratingCount})` : "";
 
     const tone = toneClasses[index % toneClasses.length];
-    const distanceLabel = resolveDistanceLabel(menu);
+    const locationInfo = resolveLocationInfo(menu);
     const details = `
       <p><span class="label">Timings:</span> ${menu.timings}</p>
       <p><span class="label">Crowd:</span> ${menu.crowd}</p>
-      <p><span class="label">Distance:</span> ${distanceLabel}</p>
+      <p><span class="label">Address:</span> ${locationInfo.address}</p>
+      ${locationInfo.distanceText ? `<p><span class="label">Distance:</span> ${locationInfo.distanceText}</p>` : ""}
     `;
 
     article.innerHTML = `
@@ -238,11 +245,12 @@
     }
 
     if (menuModalDetails) {
-      const distanceLabel = resolveDistanceLabel(menu);
+      const locationInfo = resolveLocationInfo(menu);
       menuModalDetails.innerHTML = `
         <p><strong>Timings:</strong> ${menu.timings || "-"}</p>
         <p><strong>Crowd:</strong> ${menu.crowd || "-"}</p>
-        <p><strong>Distance:</strong> ${distanceLabel}</p>
+        <p><strong>Address:</strong> ${locationInfo.address}</p>
+        ${locationInfo.distanceText ? `<p><strong>Distance:</strong> ${locationInfo.distanceText}</p>` : ""}
         <p><strong>Date:</strong> ${menu.menu_date || "-"}</p>
       `;
     }
