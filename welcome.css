@@ -294,6 +294,17 @@ img {
   background: rgba(255, 255, 255, 0.18);
 }
 
+.hero-cover .install-app-btn {
+  border-color: rgba(255, 255, 255, 0.38);
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.18);
+}
+
+.hero-cover .install-app-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .hero-cover .btn.primary {
   box-shadow: 0 14px 22px rgba(225, 88, 58, 0.36);
 }
@@ -471,6 +482,34 @@ img {
 .ghost-btn:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-strong);
+}
+
+.install-app-btn {
+  border: 1px solid rgba(225, 88, 58, 0.22);
+}
+
+.install-app-btn[hidden] {
+  display: none !important;
+}
+
+.install-help-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(92vw, 540px);
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: rgba(27, 23, 19, 0.92);
+  color: var(--white);
+  box-shadow: 0 18px 34px rgba(16, 14, 13, 0.22);
+  font-size: 14px;
+  line-height: 1.5;
+  z-index: 1200;
+}
+
+.install-help-toast[hidden] {
+  display: none !important;
 }
 
 .eyebrow {

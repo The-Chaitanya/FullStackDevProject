@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MessBuddy | Welcome</title>
+    <meta name="theme-color" content="#d3482f" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/app-icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -34,6 +38,9 @@
             <a href="#trust">Trust</a>
           </nav>
           <div class="nav-actions">
+            <button class="ghost-btn install-app-btn" type="button" data-pwa-install hidden>
+              Install App
+            </button>
             <a class="ghost-btn" href="login.html" data-transition>Login</a>
             <a class="btn primary" href="login.html" data-transition>Get Started</a>
           </div>
@@ -48,6 +55,9 @@
           students and vendors.
         </p>
         <div class="hero-actions">
+          <button class="ghost-btn install-app-btn hero-install-btn" type="button" data-pwa-install hidden>
+            Install App
+          </button>
           <a class="btn primary" href="login.html" data-transition>Continue to Login</a>
         </div>
         <p class="hero-cover-note">Scroll to explore features.</p>
@@ -285,8 +295,13 @@
         </div>
       </div>
     </footer>
+    <div class="install-help-toast" data-pwa-install-help hidden>
+      Install is available after the browser marks this page app-ready. If it does not open, refresh once
+      on `https` and try again from Chrome menu -> `Install app`.
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="pwa.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

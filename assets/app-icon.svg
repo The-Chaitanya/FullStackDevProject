@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MessBuddy">
+  <defs>
+    <linearGradient id="g" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#e25b3c"/>
+      <stop offset="100%" stop-color="#9f2818"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="#fff7f2"/>
+  <rect x="56" y="56" width="400" height="400" rx="110" fill="url(#g)"/>
+  <path d="M148 358V156h54l54 86 54-86h54v202h-48V232l-50 79h-19l-51-80v127z" fill="#fff7f2"/>
+</svg>
