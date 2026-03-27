@@ -859,6 +859,20 @@ button i,
     align-items: flex-start;
   }
 
+  .top-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .top-actions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .storage-pill {
+    text-align: center;
+  }
+
   .brand-mark {
     width: 46px;
     height: 46px;
@@ -887,6 +901,13 @@ button i,
 
   .map-tools {
     grid-template-columns: 1fr;
+  }
+
+  .card-actions button,
+  .form-actions button,
+  .preset-actions button,
+  .preset-actions .ghost-link {
+    width: 100%;
   }
 
   .vendor-location-map {

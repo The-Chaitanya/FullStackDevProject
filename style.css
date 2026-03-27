@@ -1468,6 +1468,42 @@ body.data-loading .tier {
 }
 
 @media (max-width: 640px) {
+  .nav-inner {
+    padding: 12px 16px;
+    gap: 14px;
+  }
+
+  .nav-links {
+    gap: 8px;
+  }
+
+  .nav-links a {
+    flex: 1 1 120px;
+    text-align: center;
+  }
+
+  .nav-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .location-btn,
+  .filter-toggle-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .chip {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
   .filter-bar {
     grid-template-columns: 1fr;
   }
@@ -1478,12 +1514,89 @@ body.data-loading .tier {
 
   .filter-actions {
     width: 100%;
+    flex-direction: column;
   }
 
   .filter-actions .btn,
   .filter-actions .ghost-btn {
     flex: 1;
     justify-content: center;
+    width: 100%;
+  }
+
+  .tier-track {
+    padding: 16px;
+  }
+
+  .cards {
+    gap: 14px;
+  }
+
+  .card {
+    min-width: min(82vw, 300px);
+  }
+
+  .student-dashboard .cards.dynamic-layout .card {
+    flex-basis: min(82vw, 300px);
+  }
+
+  .menu-modal[open] {
+    padding: 10px;
+    place-items: end center;
+  }
+
+  .menu-modal-panel {
+    width: min(100vw - 20px, 680px);
+    max-height: calc(100vh - 20px);
+    padding: 16px;
+    border-radius: 22px 22px 16px 16px;
+  }
+
+  .menu-modal-header,
+  .menu-map-header,
+  .rating-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .menu-map-link,
+  .menu-modal-close,
+  #submitRatingBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rating-stars {
+    flex-wrap: wrap;
+  }
+
+  #ratingMessage {
+    text-align: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .page-header,
+  .filter-panel,
+  .insight-card,
+  .no-results,
+  .dashboard-loader,
+  .menu-modal-panel {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .tier-label {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  .card {
+    min-width: calc(100vw - 48px);
+  }
+
+  .student-dashboard .cards.dynamic-layout .card {
+    flex-basis: calc(100vw - 48px);
   }
 }
 

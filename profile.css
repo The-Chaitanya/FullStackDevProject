@@ -153,6 +153,16 @@ body.page.page-fade-out {
 }
 
 @media (max-width: 700px) {
+  .topbar {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-wrap {
+    padding: 4px 16px 28px;
+  }
+
   .profile-card {
     grid-template-columns: 1fr;
     text-align: center;
@@ -165,5 +175,14 @@ body.page.page-fade-out {
   .actions {
     display: flex;
     justify-content: center;
+  }
+
+  .row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  #logoutBtn {
+    width: 100%;
   }
 }

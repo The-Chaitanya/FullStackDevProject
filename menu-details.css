@@ -111,3 +111,24 @@ h1 {
   margin-top: 8px;
   color: #666;
 }
+
+@media (max-width: 600px) {
+  .page {
+    margin: 18px auto;
+    padding: 0 12px;
+  }
+
+  .panel {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .stars {
+    flex-wrap: wrap;
+  }
+
+  .stars button,
+  .submit-btn {
+    width: 100%;
+  }
+}

@@ -655,6 +655,65 @@ body::after {
   }
 }
 
+@media (max-width: 640px) {
+  body {
+    padding: 12px 12px 24px;
+    gap: 12px;
+  }
+
+  .page-intro {
+    max-width: 100%;
+    padding: 0 4px;
+  }
+
+  .page-intro h1 {
+    font-size: clamp(1.95rem, 9vw, 2.45rem);
+  }
+
+  .container,
+  .page-footer {
+    width: 100%;
+  }
+
+  .login-card {
+    padding: 16px;
+    min-height: auto;
+  }
+
+  .login-card h2 {
+    white-space: normal;
+  }
+
+  .login-card.active form {
+    max-height: 280px;
+  }
+
+  .oauth-btn,
+  .ghost-btn,
+  .login-card button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .card-actions,
+  .page-footer,
+  .footer-left,
+  .footer-right {
+    width: 100%;
+  }
+
+  .footer-left,
+  .footer-right {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .vendor,
+  .student {
+    height: 118px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
