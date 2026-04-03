@@ -176,7 +176,7 @@ Use the links below depending on what a visitor wants to understand:
 - [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md): full technical documentation
 - [DIAGRAMS.md](./DIAGRAMS.md): architecture, flow, ER, and deployment diagrams
 - [SECURITY.md](./SECURITY.md): security reporting and policy information
-- [LICENSE](./LICENSE): repository license
+- [LICENSE](./LICENSE): usage and rights notice
 
 ## Contributors
 
@@ -194,3 +194,8 @@ Use the links below depending on what a visitor wants to understand:
 ## Project Status
 
 MessBuddy is currently a frontend-first campus meal platform with working student and vendor flows, Supabase-backed persistence, and documentation for architecture and setup. It is a strong base for further improvements such as automated tests, environment-based configuration, and extended admin workflows.
+
+## Usage Rights
+
+This repository is currently distributed as `All Rights Reserved`.
+See [LICENSE](./LICENSE) for the current usage restrictions.
