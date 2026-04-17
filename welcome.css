@@ -79,6 +79,12 @@ body.page.page-loader-active.page-fade-out {
   pointer-events: none;
 }
 
+body.page-loaded #messbuddy-page-loader {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .page-loader__card {
   --bg-color: #111111;
   background-color: var(--bg-color);

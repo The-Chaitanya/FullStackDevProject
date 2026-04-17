@@ -150,6 +150,12 @@
         transform: none !important;
         filter: none !important;
       }
+
+      body.page-loaded #messbuddy-page-loader {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
     `;
     document.head.appendChild(style);
   };
@@ -202,19 +208,38 @@
     }
   };
 
+  const forceLoaderClosed = ({ removeNode = true } = {}) => {
+    const loader = document.getElementById(LOADER_ID);
+    document.body?.classList.remove("page-loader-active");
+    document.body?.classList.add("page-loaded");
+    if (!loader) return;
+    loader.classList.add("is-hidden");
+    if (removeNode) {
+      window.setTimeout(() => {
+        loader.remove();
+      }, 400);
+    }
+  };
+
+  window.messBuddyHideLoader = () => {
+    hideLoader({ immediate: true });
+  };
+
   const hideLoader = ({ immediate = false } = {}) => {
     const loader = document.getElementById(LOADER_ID);
-    if (!loader) return;
+    if (!loader) {
+      document.body?.classList.remove("page-loader-active");
+      return;
+    }
     if (hideScheduled && !immediate) return;
     hideScheduled = true;
     cleanupLoaderState();
 
     const finishHide = () => {
-      loader.classList.add("is-hidden");
-      window.setTimeout(() => {
-        document.body?.classList.remove("page-loader-active");
+      forceLoaderClosed({ removeNode: !immediate });
+      if (immediate) {
         loader.remove();
-      }, immediate ? 0 : 400);
+      }
     };
 
     if (immediate) {

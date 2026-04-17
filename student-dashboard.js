@@ -339,6 +339,10 @@
   };
 
   const dismissSharedPageLoader = () => {
+    if (typeof window.messBuddyHideLoader === "function") {
+      window.messBuddyHideLoader();
+      return;
+    }
     const loader = document.getElementById("messbuddy-page-loader");
     if (!loader) {
       document.body.classList.remove("page-loader-active");
