@@ -10,6 +10,7 @@
   let loaderShownAt = 0;
   let hideScheduled = false;
   let readyObserver = null;
+  let fallbackTimer = null;
 
   const ensureLoaderStyles = () => {
     if (document.getElementById(LOADER_STYLE_ID)) return;
@@ -190,23 +191,41 @@
     return loader;
   };
 
-  const hideLoader = () => {
-    if (hideScheduled) return;
-    const loader = document.getElementById(LOADER_ID);
-    if (!loader) return;
-    hideScheduled = true;
+  const cleanupLoaderState = () => {
     if (readyObserver) {
       readyObserver.disconnect();
       readyObserver = null;
     }
-    const elapsed = Date.now() - loaderShownAt;
-    const waitMs = Math.max(0, MIN_VISIBLE_MS - elapsed);
-    window.setTimeout(() => {
+    if (fallbackTimer) {
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+  };
+
+  const hideLoader = ({ immediate = false } = {}) => {
+    const loader = document.getElementById(LOADER_ID);
+    if (!loader) return;
+    if (hideScheduled && !immediate) return;
+    hideScheduled = true;
+    cleanupLoaderState();
+
+    const finishHide = () => {
       loader.classList.add("is-hidden");
       window.setTimeout(() => {
         document.body?.classList.remove("page-loader-active");
         loader.remove();
-      }, 400);
+      }, immediate ? 0 : 400);
+    };
+
+    if (immediate) {
+      finishHide();
+      return;
+    }
+
+    const elapsed = Date.now() - loaderShownAt;
+    const waitMs = Math.max(0, MIN_VISIBLE_MS - elapsed);
+    window.setTimeout(() => {
+      finishHide();
     }, waitMs);
   };
 
@@ -226,26 +245,26 @@
 
     if (document.body.hasAttribute("data-reveal-after-data")) {
       if (document.body.classList.contains("page-loaded")) {
-        hideLoader();
+        hideLoader({ immediate: true });
         return;
       }
 
       if ("MutationObserver" in window) {
         readyObserver = new MutationObserver(() => {
           if (document.body?.classList.contains("page-loaded")) {
-            hideLoader();
+            hideLoader({ immediate: true });
           }
         });
         readyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
       }
 
-      window.setTimeout(() => {
+      fallbackTimer = window.setTimeout(() => {
         if (document.body?.classList.contains("page-loaded")) {
-          hideLoader();
+          hideLoader({ immediate: true });
           return;
         }
         document.body?.classList.add("page-loaded");
-        hideLoader();
+        hideLoader({ immediate: true });
       }, MAX_WAIT_MS);
       return;
     }
@@ -278,6 +297,12 @@
   const init = () => {
     initReveal();
     initTransitions();
+
+    // Safety net: if the page is already marked loaded when this script runs,
+    // force-close any visible loader instead of waiting on observers/timers.
+    if (document.body?.classList.contains("page-loaded")) {
+      hideLoader({ immediate: true });
+    }
   };
 
   ensureLoaderStyles();
