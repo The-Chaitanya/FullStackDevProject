@@ -4,9 +4,12 @@
 
   const PAGE_TRANSITION_MS = 320;
   const MIN_VISIBLE_MS = 700;
+  const MAX_WAIT_MS = 5000;
   const LOADER_STYLE_ID = "messbuddy-loader-style";
   const LOADER_ID = "messbuddy-page-loader";
   let loaderShownAt = 0;
+  let hideScheduled = false;
+  let readyObserver = null;
 
   const ensureLoaderStyles = () => {
     if (document.getElementById(LOADER_STYLE_ID)) return;
@@ -188,8 +191,14 @@
   };
 
   const hideLoader = () => {
+    if (hideScheduled) return;
     const loader = document.getElementById(LOADER_ID);
     if (!loader) return;
+    hideScheduled = true;
+    if (readyObserver) {
+      readyObserver.disconnect();
+      readyObserver = null;
+    }
     const elapsed = Date.now() - loaderShownAt;
     const waitMs = Math.max(0, MIN_VISIBLE_MS - elapsed);
     window.setTimeout(() => {
@@ -212,9 +221,35 @@
 
   const initReveal = () => {
     if (!document.body?.classList.contains("page")) return;
-    if (document.body.hasAttribute("data-reveal-after-data")) return;
     ensureLoaderStyles();
     ensureLoader();
+
+    if (document.body.hasAttribute("data-reveal-after-data")) {
+      if (document.body.classList.contains("page-loaded")) {
+        hideLoader();
+        return;
+      }
+
+      if ("MutationObserver" in window) {
+        readyObserver = new MutationObserver(() => {
+          if (document.body?.classList.contains("page-loaded")) {
+            hideLoader();
+          }
+        });
+        readyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      }
+
+      window.setTimeout(() => {
+        if (document.body?.classList.contains("page-loaded")) {
+          hideLoader();
+          return;
+        }
+        document.body?.classList.add("page-loaded");
+        hideLoader();
+      }, MAX_WAIT_MS);
+      return;
+    }
+
     revealPage();
   };
 
