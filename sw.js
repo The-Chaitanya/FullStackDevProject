@@ -1,4 +1,4 @@
-const CACHE_NAME = "messbuddy-v2";
+const CACHE_NAME = "messbuddy-v3";
 const APP_SHELL = [
   "/",
   "/welcome.html",
@@ -35,6 +35,16 @@ const APP_SHELL = [
   "/assets/vendor-image.png"
 ];
 
+const isAppAsset = (url) => {
+  const pathname = new URL(url).pathname;
+  return (
+    pathname.endsWith(".html") ||
+    pathname.endsWith(".css") ||
+    pathname.endsWith(".js") ||
+    pathname.endsWith(".webmanifest")
+  );
+};
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()),
@@ -63,17 +73,23 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
-  if (request.mode === "navigate") {
+  const requestUrl = new URL(request.url);
+  const sameOrigin = requestUrl.origin === self.location.origin;
+
+  if (request.mode === "navigate" || (sameOrigin && isAppAsset(request.url))) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         .catch(async () => {
           const cached = await caches.match(request);
-          return cached || caches.match("/welcome.html");
+          if (cached) return cached;
+          return request.mode === "navigate" ? caches.match("/welcome.html") : Response.error();
         }),
     );
     return;

@@ -1,4 +1,5 @@
 (() => {
+  const SW_URL = "sw.js?v=3";
   let deferredInstallPrompt = null;
   let helpToastTimer = null;
 
@@ -46,7 +47,8 @@
 
   const register = async () => {
     try {
-      await navigator.serviceWorker.register("sw.js");
+      const registration = await navigator.serviceWorker.register(SW_URL);
+      registration.update().catch(() => {});
     } catch {
       // Service worker registration failure should not break the site.
     }
