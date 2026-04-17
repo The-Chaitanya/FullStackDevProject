@@ -18,9 +18,26 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-    <link rel="stylesheet" href="welcome.css" />
+    <link rel="stylesheet" href="welcome.css?v=loader2" />
   </head>
-  <body class="page perf-lite">
+  <body class="page perf-lite page-loader-active">
+    <div id="messbuddy-page-loader" class="page-loader" aria-hidden="true">
+      <div class="page-loader__card">
+        <div class="page-loader__content" aria-label="Loading MessBuddy">
+          <p class="page-loader__label">loading</p>
+          <div class="page-loader__words">
+            <div class="page-loader__word-track">
+              <span class="page-loader__word">messbuddy</span>
+              <span class="page-loader__word">menus</span>
+              <span class="page-loader__word">ratings</span>
+              <span class="page-loader__word">crowds</span>
+              <span class="page-loader__word">messbuddy</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="loader.js?v=loader2"></script>
     <section class="hero-cover">
       <header class="site-nav hero-nav">
         <div class="nav-inner">
@@ -269,7 +286,7 @@
           <a href="#about">Features</a>
           <a href="#how">How It Works</a>
           <a href="#audience">Community</a>
-          <a href="login.html">Login</a>
+          <a href="login.html" data-transition>Login</a>
         </div>
         <div class="footer-col">
           <h4>Support</h4>
@@ -301,7 +318,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-    <script src="pwa.js"></script>
-    <script src="script.js"></script>
+    <script src="pwa.js?v=loader2"></script>
+    <script src="script.js?v=loader2"></script>
   </body>
 </html>

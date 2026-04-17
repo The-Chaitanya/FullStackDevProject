@@ -1,4 +1,4 @@
-const CACHE_NAME = "messbuddy-v1";
+const CACHE_NAME = "messbuddy-v2";
 const APP_SHELL = [
   "/",
   "/welcome.html",
@@ -8,6 +8,7 @@ const APP_SHELL = [
   "/profile.html",
   "/menu-details.html",
   "/welcome.css",
+  "/loader.js",
   "/login.css",
   "/style.css",
   "/vendor-dashboard.css",
