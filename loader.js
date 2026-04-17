@@ -305,6 +305,14 @@
     }
   };
 
+  window.addEventListener(
+    "load",
+    () => {
+      hideLoader({ immediate: true });
+    },
+    { once: true },
+  );
+
   ensureLoaderStyles();
   if (document.body) {
     ensureLoader();

@@ -52,6 +52,19 @@
     vegetarianOnly: document.getElementById("vegetarianOnly"),
   };
 
+  const dismissSharedPageLoader = () => {
+    const loader = document.getElementById("messbuddy-page-loader");
+    if (!loader) {
+      document.body.classList.remove("page-loader-active");
+      return;
+    }
+    loader.classList.add("is-hidden");
+    window.setTimeout(() => {
+      document.body.classList.remove("page-loader-active");
+      loader.remove();
+    }, 400);
+  };
+
   const parseGeoMeta = (rawDistance) => {
     const value = String(rawDistance || "").trim();
     const match = value.match(/\s*\[geo:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]\s*$/i);
@@ -1147,6 +1160,8 @@
       setMessage(`Mess locked as "${lockedMessName}". You can update daily menu only.`, "success");
     }
     await loadCards();
+    document.body.classList.add("page-loaded");
+    dismissSharedPageLoader();
   };
 
   init();

@@ -338,16 +338,31 @@
     document.body.classList.toggle("data-loading", Boolean(isLoading));
   };
 
+  const dismissSharedPageLoader = () => {
+    const loader = document.getElementById("messbuddy-page-loader");
+    if (!loader) {
+      document.body.classList.remove("page-loader-active");
+      return;
+    }
+    loader.classList.add("is-hidden");
+    window.setTimeout(() => {
+      document.body.classList.remove("page-loader-active");
+      loader.remove();
+    }, 400);
+  };
+
   const finalizeInitialReveal = () => {
     if (!document.body.classList.contains("page-loaded")) {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           document.body.classList.remove("pre-data");
           document.body.classList.add("page-loaded");
+          dismissSharedPageLoader();
         });
       });
     } else {
       document.body.classList.remove("pre-data");
+      dismissSharedPageLoader();
     }
   };
 
