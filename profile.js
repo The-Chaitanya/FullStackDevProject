@@ -25,13 +25,21 @@
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
       : null;
 
-  const warmDashboardRoute = () => {
+  const getDashboardRoute = (role) =>
+    normalizeRole(role) === "vendor" ? "vendor-dashboard.html?role=vendor" : "student-dashboard.html?role=student";
+
+  const warmDashboardRoute = (role) => {
     // Fire-and-forget warmup so dashboard assets start loading during fade-out.
     try {
-      fetch("student-dashboard.html", { cache: "force-cache" }).catch(() => {});
-      ["style.css", "menu-data.js", "student-dashboard.js", "assets/food-thali.webp", "assets/food-burger.webp"].forEach(
-        (path) => fetch(path, { cache: "force-cache" }).catch(() => {}),
-      );
+      const normalizedRole = normalizeRole(role);
+      const htmlPath =
+        normalizedRole === "vendor" ? "vendor-dashboard.html" : "student-dashboard.html";
+      const assetPaths =
+        normalizedRole === "vendor"
+          ? ["vendor-dashboard.css", "menu-data.js", "vendor-dashboard.js", "assets/vendor-image.png"]
+          : ["style.css", "menu-data.js", "student-dashboard.js", "assets/food-thali.webp", "assets/food-burger.webp"];
+      fetch(htmlPath, { cache: "force-cache" }).catch(() => {});
+      assetPaths.forEach((path) => fetch(path, { cache: "force-cache" }).catch(() => {}));
     } catch {
       // Ignore warmup errors.
     }
@@ -44,6 +52,8 @@
   const statusEl = document.getElementById("status");
   const lastSignInEl = document.getElementById("lastSignIn");
   const logoutBtn = document.getElementById("logoutBtn");
+  const backLinkEl = document.getElementById("backToDashboardLink");
+  const pageTitleEl = document.getElementById("profilePageTitle");
 
   // Safety guard: avoid runtime errors if script loads on a different page.
   if (!emailEl || !nameEl || !avatarEl || !statusEl || !lastSignInEl) {
@@ -73,6 +83,18 @@
     }
   };
 
+  const applyRoleUi = (role) => {
+    const normalizedRole = normalizeRole(role);
+    if (backLinkEl) {
+      backLinkEl.href = getDashboardRoute(normalizedRole);
+    }
+    if (pageTitleEl) {
+      pageTitleEl.textContent = `${normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1)} Profile`;
+    }
+    document.title =
+      normalizedRole === "vendor" ? "Vendor Profile | MessBuddy" : "Student Profile | MessBuddy";
+  };
+
   const setGuest = () => {
     emailEl.textContent = "Not signed in";
     nameEl.textContent = "Student";
@@ -80,6 +102,7 @@
     if (roleEl) roleEl.textContent = "Guest";
     statusEl.textContent = "Guest";
     lastSignInEl.textContent = "-";
+    applyRoleUi("student");
   };
 
   const formatDate = (value) => {
@@ -105,12 +128,13 @@
     const email = user.email || "No email";
     const role = normalizeRole(user.user_metadata?.role || readRoleHint());
     persistRole(role);
+    applyRoleUi(role);
 
     const rawName =
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
       email.split("@")[0] ||
-      "Student";
+      (role === "vendor" ? "Vendor" : "Student");
 
     nameEl.textContent = rawName;
     emailEl.textContent = email;
@@ -139,8 +163,8 @@
       const href = link.getAttribute("href");
       if (!href || href.startsWith("#") || link.target === "_blank") return;
       event.preventDefault();
-      if (href.includes("student-dashboard.html")) {
-        warmDashboardRoute();
+      if (href.includes("student-dashboard.html") || href.includes("vendor-dashboard.html")) {
+        warmDashboardRoute(readRoleHint());
       }
       document.body.classList.add("page-fade-out");
       window.setTimeout(() => {
@@ -149,5 +173,6 @@
     });
   });
 
+  applyRoleUi(readRoleHint());
   loadUser();
 })();

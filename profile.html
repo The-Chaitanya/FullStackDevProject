@@ -9,10 +9,6 @@
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="dns-prefetch" href="//pdhqcqjyhkptoxlbkiif.supabase.co" />
     <link rel="preconnect" href="https://pdhqcqjyhkptoxlbkiif.supabase.co" crossorigin />
-    <link rel="prefetch" href="style.css" />
-    <link rel="prefetch" href="menu-data.js" />
-    <link rel="prefetch" href="student-dashboard.js" />
-    <link rel="prefetch" href="student-dashboard.html" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -24,8 +20,10 @@
   <body class="page">
     <script src="loader.js?v=loader2"></script>
     <header class="topbar">
-      <a class="back-link" href="student-dashboard.html" data-transition>&larr; Back to Dashboard</a>
-      <h1>Student Profile</h1>
+      <a class="back-link" id="backToDashboardLink" href="student-dashboard.html?role=student" data-transition
+        >&larr; Back to Dashboard</a
+      >
+      <h1 id="profilePageTitle">Profile</h1>
     </header>
 
     <main class="profile-wrap">
