@@ -106,6 +106,23 @@ const normalizeRole = (value) => (String(value || "").toLowerCase() === "vendor"
 const getRedirectForRole = (role) =>
   normalizeRole(role) === "vendor" ? VENDOR_REDIRECT_URL : STUDENT_REDIRECT_URL;
 
+const readStoredRole = () => {
+  try {
+    return normalizeRole(window.localStorage.getItem(ROLE_STORAGE_KEY));
+  } catch (_) {
+    return "student";
+  }
+};
+
+const resolveRoleFromUser = (user, fallbackRole = "") => {
+  const roleRaw = user?.user_metadata?.role;
+  const hasVendorMess = Boolean(String(user?.user_metadata?.mess_name || "").trim());
+  if (roleRaw) return normalizeRole(roleRaw);
+  if (hasVendorMess) return "vendor";
+  if (fallbackRole) return normalizeRole(fallbackRole);
+  return "";
+};
+
 const persistRole = (role) => {
   try {
     window.localStorage.setItem(ROLE_STORAGE_KEY, role);
@@ -136,11 +153,22 @@ const enforceExistingSessionRole = async () => {
   const { data } = await supabaseClient.auth.getUser();
   const user = data?.user;
   if (!user) return;
-  const roleRaw = user.user_metadata?.role;
-  const hasVendorMess = Boolean(String(user.user_metadata?.mess_name || "").trim());
-  const role = roleRaw ? normalizeRole(roleRaw) : hasVendorMess ? "vendor" : "";
+  const queryRole = new URLSearchParams(window.location.search).get("role") || "";
+  const role = resolveRoleFromUser(user, queryRole || readStoredRole());
   if (!role) return;
   redirectByRole(role);
+};
+
+const bindAuthRedirectListener = () => {
+  if (!supabaseClient) return;
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    const user = session?.user;
+    if (!user) return;
+    const queryRole = new URLSearchParams(window.location.search).get("role") || "";
+    const role = resolveRoleFromUser(user, queryRole || readStoredRole());
+    if (!role) return;
+    redirectByRole(role);
+  });
 };
 
 const handlePasswordLogin = async (form) => {
@@ -647,6 +675,7 @@ if (!supabaseClient) {
 }
 
 enforceExistingSessionRole();
+bindAuthRedirectListener();
 
 buttons.forEach((btn) => {
   btn.addEventListener("click", (event) => {
